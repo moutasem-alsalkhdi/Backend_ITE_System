@@ -416,7 +416,8 @@ class GradeController extends Controller
                     'grades.theoretical_score',
                     'grades.total_score',
                     'grades.status',
-                    'grades.recorded_at'
+                    'grades.recorded_at',
+                    'courses.year_of_study as course_year',
                 ]);
 
             // الفلاتر المعتادة
@@ -431,6 +432,9 @@ class GradeController extends Controller
             }
             if ($request->has('course_id')) {
                 $query->where('grades.course_id', $request->query('course_id'));
+            }
+            if ($request->has('year_of_study')) {
+                $query->where('courses.year_of_study', $request->query('year_of_study'));
             }
 
             // الترتيب التصاعدي لعرض التسلسل الزمني لرحلة الطالب الدراسية

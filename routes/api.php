@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/doctors', [AdminManagementController::class, 'getDoctors']);
     // روابط إسناد وإدارة مواد الدكاترة والمعيدين للآدمن
     Route::post('/admin/courses/assign-staff', [CourseAssignmentController::class, 'assignStaff']);
+    Route::get('/doctor/course-assignment', [CourseAssignmentController::class, 'getdoctorCourseAssignment']);
     Route::get('/courses/assignments', [CourseAssignmentController::class, 'getCourseAssignments']);
  
     Route::post('/auth/doctor/register',    [AuthController::class, 'registerDoctor']);
@@ -54,7 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/attendance/record-qr', [AttendanceController::class, 'recordAttendanceByQr']);
     // المسار الجديد الخاص بالطالب لاستعراض حضوره
-    Route::get('/student/attendance', [AttendanceController::class, 'getStudentAttendance']);
+  
     Route::get('/doctor/attendance/list', [AttendanceController::class, 'getLectureAttendance']);
     //  صلاحيات الإدارة الجامعية والكنترول (Admin / Control Panel)
     Route::post('/admin/grades/import-excel', [GradeController::class, 'importExcelGrades']);
@@ -102,6 +103,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/student/wallet/balance',[WalletController::class, 'getBalance']);
     Route::get('/student/wallet/transactions',[WalletController::class, 'getTransactions']);
     Route::post('/student/wallet/pay',[WalletController::class, 'payForService']);
+
+    // أضف هذه الروابط الجديدة:
+
+    // ── جلسات الحضور الجديدة ──
+    Route::post('/attendance/session/start', [AttendanceController::class, 'startAttendanceSession']);
+    Route::post('/attendance/session/end', [AttendanceController::class, 'endAttendanceSession']);
+    Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance']);
+    
+    // ── جلب سجل الحضور التفصيلي ──
+    Route::get('/student/attendance/detailed', [AttendanceController::class, 'getDetailedAttendance']);
+    Route::get('/student/attendance', [AttendanceController::class, 'getStudentAttendance']);
+
 
 
 
