@@ -10,6 +10,7 @@ class Attendance extends Model
     use HasFactory;
 
     protected $fillable = [
+        'session_id',
         'student_id',
         'course_id',
         'session_type',
@@ -18,6 +19,11 @@ class Attendance extends Model
         'lecture_number',
         'attended_at'
     ];
+
+    public function attendance()
+    {
+        return $this->belongsTo(Attendance::class, 'session_id');
+    }
 
     // علاقة: سجل الحضور ينتمي إلى طالب
     public function student()

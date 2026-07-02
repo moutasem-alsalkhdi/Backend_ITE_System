@@ -160,4 +160,39 @@ class EnrollmentController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * جلب بيانات الفصل الدراسي الحالي والنشط في النظام
+     * GET /api/admin/semester/current
+     */
+    public function getCurrentSemester()
+    {
+        try {
+            // جلب آخر فصل دراسي تم تسجيل الطلاب فيه
+            $currentEnrollment = DB::table('enrollments')
+                ->orderBy('id', 'desc')
+                ->first(['academic_year', 'semester']);
+
+            if (!$currentEnrollment) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'لم يتم فتح أي فصل دراسي بعد.'
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'academic_year' => $currentEnrollment->academic_year,
+                    'semester'      => $currentEnrollment->semester,
+                    'semester_text' => $currentEnrollment->semester == 1 ? 'الفصل الأول' : 'الفصل الثاني'
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'حدث خطأ أثناء جلب بيانات الفصل الدراسي: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

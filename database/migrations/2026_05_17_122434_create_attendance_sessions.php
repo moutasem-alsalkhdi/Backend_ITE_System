@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('attendance_sessions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('course_id')->constrained('courses')->cascadeOnDelete();
-            $table->enum('session_type', ['theory', 'lab']);
+            $table->enum('session_type', ['theoretical', 'practical']);
             $table->string('lecture_number');
             $table->foreignId('opened_by')->constrained('users')->cascadeOnDelete(); // الدكتور الذي بدأ الجلسة
             $table->integer('total_enrolled'); // عدد الطلاب المسجلين للمادة
@@ -20,8 +20,6 @@ return new class extends Migration {
             $table->text('notes')->nullable();
             $table->timestamps();
             
-            // منع تسجيل جلسة مكررة لنفس المحاضرة
-            $table->unique(['course_id', 'session_type', 'lecture_number', 'started_at'],'sessions_multi_unique');
         });
     }
 

@@ -34,16 +34,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/doctors', [AdminManagementController::class, 'getDoctors']);
     // روابط إسناد وإدارة مواد الدكاترة والمعيدين للآدمن
     Route::post('/admin/courses/assign-staff', [CourseAssignmentController::class, 'assignStaff']);
-    Route::get('/doctor/course-assignment', [CourseAssignmentController::class, 'getdoctorCourseAssignment']);
     Route::get('/courses/assignments', [CourseAssignmentController::class, 'getCourseAssignments']);
  
     Route::post('/auth/doctor/register',    [AuthController::class, 'registerDoctor']);
 
     // رابط فتح الفصل الدراسي الجديد وتهيئة مواد كل الطلاب تلقائياً
     Route::post('/admin/semester/open', [EnrollmentController::class, 'openNewSemester']);
+    Route::get('/admin/semester/current', [EnrollmentController::class, 'getCurrentSemester']);
     Route::post('/import-excel', [AdminFileController::class, 'importExcelData']);
     // رابط جلب معلومات المواد (مع إمكانية الفرز والتصفية)
     Route::get('/courses/info', [CourseController::class, 'getCoursesInfo']);
+    Route::get('/student/my-enrolled-courses', [CourseController::class, 'getMyEnrolledCourses']);
     Route::get('/student/eligible-courses', [CourseController::class, 'getEligibleCourses']);
     
     Route::post('/LectureFile/upload-lecfile', [LectureFileController::class, 'uploadLectureFile']);
@@ -53,7 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/LectureFile/{id}',[LectureFileController::class, 'deleteFile']);
 
 
-    Route::post('/attendance/record-qr', [AttendanceController::class, 'recordAttendanceByQr']);
+    //Route::post('/attendance/record-qr', [AttendanceController::class, 'recordAttendanceByQr']);
     // المسار الجديد الخاص بالطالب لاستعراض حضوره
   
     Route::get('/doctor/attendance/list', [AttendanceController::class, 'getLectureAttendance']);

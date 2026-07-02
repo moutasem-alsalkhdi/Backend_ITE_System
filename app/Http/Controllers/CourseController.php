@@ -66,6 +66,53 @@ class CourseController extends Controller
             })
         ], 200);
     }
+
+    /**
+     * جلب مواد الطالب المسجل بيها بالفصل الدراسي الحالي
+     * GET /api/student/my-enrolled-courses
+     */
+    public function getMyEnrolledCourses(Request $request)
+    {
+        $studentId = Auth::id();
+
+        // 1. جلب الفصل الحالي (آخر فصل تم فتحه بالنظام)
+        $current = DB::table('enrollments')
+            ->orderBy('id', 'desc')
+            ->first(['academic_year', 'semester']);
+
+        if (!$current) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'لم يتم فتح أي فصل دراسي بعد.'
+            ], 404);
+        }
+
+        // 2. جلب مواد هذا الطالب بالذات لهذا الفصل بالتحديد
+        $courses = DB::table('courses')
+            ->join('enrollments', 'courses.id', '=', 'enrollments.course_id')
+            ->where('enrollments.student_id', $studentId)
+            ->where('enrollments.academic_year', $current->academic_year)
+            ->where('enrollments.semester', $current->semester)
+            ->select([
+                'courses.id',
+                'courses.name',
+                'courses.has_lab',
+                'courses.year_of_study',
+                'courses.theory_max_mark',
+                'courses.practical_max_mark',
+                'courses.semester',
+                'courses.department',
+            ])
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'count'  => $courses->count(),
+            'data'   => $courses,
+        ], 200);
+    }
+
+
     public function getEligibleCourses(Request $request)
     {
         $request->validate(['request_type' => 'required|in:objection,lab_redo']);

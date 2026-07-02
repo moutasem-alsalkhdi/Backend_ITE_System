@@ -19,7 +19,7 @@ class StudentController extends Controller
             // جلب بيانات الطالب الحالي المسجل دخوله عبر الـ Token
             $student = DB::table('users')
                 ->where('id', Auth::id())
-                ->select('id', 'name', 'university_id', 'exam_number', 'qr_code')
+                ->select('id', 'name', 'university_id', 'exam_number', 'qr_code', 'year_of_study', 'department')
                 ->first();
 
             if (!$student) {
@@ -37,7 +37,9 @@ class StudentController extends Controller
                     'name'          => $student->name,
                     'university_id' => $student->university_id,
                     'exam_number'   => $student->exam_number,
-                    'qr_code_text'  => $student->qr_code // 🎯 هذا ما سيترجمه مطور الواجهات إلى صورة QR داخل تطبيقه
+                    'qr_code_text'  => $student->qr_code,
+                    'year_of_study' => $student->year_of_study,
+                    'department'    => $student->department
                 ]
             ], 200);
 
