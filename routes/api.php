@@ -32,6 +32,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── عرض الدكاترة والمعيدين ──────────────────────────────────────────
     Route::get('/admin/doctors', [AdminManagementController::class, 'getDoctors']);
+    Route::put('/admin/students/givevolunteerrole', [AdminManagementController::class, 'givevolunteerrole']);
+    Route::put('/students/givevolunteerrole', [AdminManagementController::class, 'givevolunteerrole']);
+
     // روابط إسناد وإدارة مواد الدكاترة والمعيدين للآدمن
     Route::post('/admin/courses/assign-staff', [CourseAssignmentController::class, 'assignStaff']);
     Route::get('/courses/assignments', [CourseAssignmentController::class, 'getCourseAssignments']);
@@ -46,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/courses/info', [CourseController::class, 'getCoursesInfo']);
     Route::get('/student/my-enrolled-courses', [CourseController::class, 'getMyEnrolledCourses']);
     Route::get('/student/eligible-courses', [CourseController::class, 'getEligibleCourses']);
+    Route::get('/student/getSemesterCourses', [CourseController::class, 'getSemesterCourses']);
     
     Route::post('/LectureFile/upload-lecfile', [LectureFileController::class, 'uploadLectureFile']);
     Route::get('/LectureFile', [LectureFileController::class, 'index']);    // جلب محاضرات مادة معينة   

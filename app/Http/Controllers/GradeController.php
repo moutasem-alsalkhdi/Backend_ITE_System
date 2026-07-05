@@ -122,7 +122,7 @@ class GradeController extends Controller
                 // جلب الطالب والتأكد من قسمه
                 $student = DB::table('users')
                     ->where('exam_number', $exam_number)
-                    ->where('role', 'student')
+                    ->whereIn('role', ['student', 'volunteer'])
                     ->where('department', $department)
                     ->first();
 
@@ -293,7 +293,7 @@ class GradeController extends Controller
         try {
             // البحث عن الطالب والتأكد من قسمه الدراسي
             $student = DB::table('users')
-                ->where('role', 'student')
+                ->whereIn('role', ['student', 'volunteer'])
                 ->where('department', $department)
                 ->where(function ($q) use ($query) {
                     $q->where('exam_number', $query)

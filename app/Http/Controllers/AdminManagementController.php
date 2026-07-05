@@ -9,11 +9,21 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
 
 class AdminManagementController extends Controller
 {
     public function storeAdmin(Request $request)
     {
+        $currentUser = $request->user();
+    
+    if (!$currentUser || $currentUser->role != 'admin') {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'عذراً، لا تملك الصلاحية الكافية لإجراء هذه العملية.'
+        ], 403);
+    }
         // 1️⃣ التحقق من البيانات المدخلة بعناية
         $request->validate([
             'name'       => 'required|string|max:255',
@@ -90,5 +100,44 @@ class AdminManagementController extends Controller
                 'message' => 'حدث خطأ أثناء جلب البيانات: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function givevolunteerrole(Request $request)
+    {
+        $currentUser = $request->user();
+
+        if (!$currentUser || !in_array($currentUser->role, ['admin', 'volunteer'])) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'عذراً، لا تملك الصلاحية الكافية لإجراء هذه العملية.'
+            ], 403);
+        }
+
+        $request->validate([
+            'university_id'       => 'required|string|max:255',
+
+        ], [
+            'university_id.required' => 'معرف الجامعة مطلوب.',
+        ]);
+
+        DB::table('users')
+            ->where('university_id', $request->university_id)
+            ->update([
+                'role' => 'volunteer',
+            ]);
+            $user = DB::table('users')
+            ->where('university_id', $request->university_id)
+            ->first();
+
+        //  إرجاع استجابة نجاح نظيفة للمستخدم
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'تم تغيير الصلاحية بنجاح.',
+            'data'    => [
+                'university_id'       => $request->university_id,
+                'name'       => $user->name,
+                'role'       => 'volunteer',
+            ]
+        ], 201);
     }
 }

@@ -10,8 +10,17 @@ use Illuminate\Support\Facades\Auth;
 
 class LectureFileController extends Controller
 {
+
     public function uploadLectureFile(Request $request)
     {
+        $currentUser = $request->user();
+
+        if (!$currentUser || !in_array($currentUser->role, ['admin', 'doctor', 'volunteer'])) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'عذراً، لا تملك الصلاحية الكافية لإجراء هذه العملية.'
+            ], 403);
+        }
         // التحقق من الحقول القادمة من الـ Postman
         $request->validate([
             'course_id'     => 'required|integer',
@@ -57,18 +66,21 @@ class LectureFileController extends Controller
 
     public function index(Request $request)
     {
-        // التحقق من إرسال رقم المادة وأنها موجودة بالفعل في جدول الـ courses
         $request->validate([
-            'course_id' => 'required|integer|exists:courses,id',
+            'course_id'     => 'required|integer|exists:courses,id',
+            'uploader_type' => 'nullable|in:doctor,volunteer',
         ]);
 
         try {
-            // جلب المحاضرات مع بيانات المادة وبيانات الدكتور (الاسم والـ id فقط للأمان)
-            $lectures = LectureFile::with(['course', 'uploader:id,name'])
+            $query = LectureFile::with(['course', 'uploader:id,name'])
                 ->where('course_id', $request->query('course_id'))
-                ->where('is_archived', false) // جلب المحاضرات غير المؤرشفة فقط
-                ->orderBy('uploaded_at', 'desc') // ترتيب من الأحدث للأقدم
-                ->get();
+                ->where('is_archived', false);
+
+            if ($request->filled('uploader_type')) {
+                $query->where('uploader_type', $request->query('uploader_type'));
+            }
+
+            $lectures = $query->orderBy('uploaded_at', 'desc')->get();
 
             return response()->json([
                 'status'  => 'success',
@@ -143,8 +155,8 @@ class LectureFileController extends Controller
                 ], 404);
             }
 
-            // التحقق من الصلاحية: صاحب الملف أو الآدمن
-            if ($user->role !== 'admin' && $lecture->uploaded_by !== $user->id) {
+
+            if ($user->role !== 'admin') {
                 return response()->json([
                     'status'  => 'error',
                     'message' => 'غير مصرح لك بأرشفة هذا الملف.'
@@ -191,25 +203,32 @@ class LectureFileController extends Controller
                 ], 404);
             }
 
-            // التحقق من الصلاحية: صاحب الملف 
-            if ( $lecture->uploaded_by !== $user->id) {
+            // الدكتور يحذف بس ملفاته الشخصية
+            // أي عضو بالفريق التطوعي (volunteer) يقدر يحذف أي ملف رفعه فريق تطوعي، بغض النظر مين رفعه بالتحديد
+            $canDelete = false;
+
+            if ($user->role === 'doctor') {
+                $canDelete = $lecture->uploaded_by === $user->id;
+            } elseif ($user->role === 'volunteer') {
+                $canDelete = $lecture->uploader_type === 'volunteer';
+            }
+
+            if (!$canDelete) {
                 return response()->json([
                     'status'  => 'error',
                     'message' => 'غير مصرح لك بحذف هذا الملف.'
                 ], 403);
             }
 
-            // حذف الملف الفيزيائي من السيرفر أولاً
             if (Storage::disk('public')->exists($lecture->file_url)) {
                 Storage::disk('public')->delete($lecture->file_url);
             }
 
-            // حذف السجل من قاعدة البيانات
             $lecture->delete();
 
             return response()->json([
                 'status'  => 'success',
-                'message' => 'تم حذف الملف نهائياً من النظام والسيرفر.'
+                'message' => 'تم حذف الملف نهائياً من النظام والسيرفر.',
             ], 200);
         } catch (Exception $e) {
             return response()->json([

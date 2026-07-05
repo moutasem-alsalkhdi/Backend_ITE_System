@@ -113,6 +113,7 @@ class CourseController extends Controller
     }
 
 
+    //المواد التي لها مواعيد نهائية فعالة ولم تنتهِ بعد
     public function getEligibleCourses(Request $request)
     {
         $request->validate(['request_type' => 'required|in:objection,lab_redo']);
@@ -150,5 +151,56 @@ class CourseController extends Controller
 
         // بالنسبة للاعتراض (objection)، تعود كل المواد المتاحة وقتها تلقائياً
         return response()->json($courses);
+    }
+
+
+
+
+    public function getSemesterCourses(Request $request)
+    {
+        // 1️⃣ جلب بيانات المستخدم الحالي لفلترة المواد تلقائياً حسب قسمه
+        $user = Auth::user();
+
+        $current = DB::table('enrollments')
+            ->orderBy('id', 'desc')
+            ->first(['academic_year', 'semester']);
+
+        if (!$current) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'لم يتم فتح أي فصل دراسي بعد.'
+            ], 404);
+        }
+
+        // 2️⃣ إمكانية الفرز القادم من الـ Request
+        $department =  $user->department;
+        $yearOfStudy = $user->year_of_study;
+
+        // 3️⃣ بناء الاستعلام وجلب المواد بالاعتماد على الحقول الحقيقية في جدولك
+        $query = DB::table('courses')
+            ->where('department',$department)
+            ->where('year_of_study',$yearOfStudy)
+            ->where('semester',$current->semester)
+            ->select('id','name','has_lab','year_of_study','theory_max_mark','practical_max_mark','semester','department')->get();
+
+
+
+        // 5️⃣ إرجاع البيانات المنسقة وفقاً لحقول جدولك
+        return response()->json([
+            'status' => 'success',
+            'count'  => $query->count(),
+            'data'   => $query->map(function ($course) {
+                return [
+                    'id'                 => $course->id,
+                    'name'               => $course->name,
+                    'has_lab'            => (bool) $course->has_lab,
+                    'year_of_study'      => $course->year_of_study,
+                    'theory_max_mark'    => $course->theory_max_mark,
+                    'practical_max_mark' => $course->practical_max_mark,
+                    'semester'           => $course->semester,
+                    'department'         => $course->department,
+                ];
+            })
+        ], 200);
     }
 }

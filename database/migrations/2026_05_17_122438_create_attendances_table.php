@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->string('lecture_number'); 
             $table->timestamp('attended_at')->useCurrent();
             $table->timestamps();
-            $table->unique(['student_id', 'course_id', 'lecture_number']);
+            $table->unique(['student_id', 'course_id', 'lecture_number','session_type']);
         });
     }
     public function down(): void {

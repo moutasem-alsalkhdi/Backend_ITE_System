@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use App\Notifications\SystemNotification;
 use Exception;
 
 class EnrollmentController extends Controller
@@ -25,7 +27,7 @@ class EnrollmentController extends Controller
 
         try {
             // 2. جلب جميع الطلاب المسجلين بالكلية
-            $students = DB::table('users')->where('role', 'student')->get();
+            $students = DB::table('users')->where('role', ['student', 'volunteer'])->get();
 
             if ($students->isEmpty()) {
                 return response()->json([
@@ -83,14 +85,19 @@ class EnrollmentController extends Controller
                 $carriedCourses = array_keys($carriedCoursesMap);
                 $count = count($carriedCourses);
 
+                $studentModel = User::find($student->id);
+
+                if ($studentModel) {
+                    if ($count > 5) {
+                        $title = 'تنبيه: مواد محملة';
+                        $body = "لديك {$count} مادة محملة من الفصول السابقة. يرجى مراجعة جدولك الدراسي.";
+
+                        $studentModel->notify(new SystemNotification($title, $body, ['type' => 'carried_courses']));
+
+                    }
+                }
+
                 if ($count > 5) {
-                    DB::table('notifications')->insert([
-                        'user_id' => $student->id,
-                        'title' => 'تنبيه: مواد محملة',
-                        'message' => "لديك {$count} مادة محملة من الفصول السابقة. يرجى مراجعة جدولك الدراسي.",
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ]);
                 }
 
                 // فحص شروط مواد الرأفة والمساعدة للتحميل
@@ -115,18 +122,18 @@ class EnrollmentController extends Controller
                 // 💡 التعديل الذكي هنا:
                 // جلب مواد السنة التالية فقط إذا نجح في الشروط، وبشرط ألا يكون الطالب في السنة الثالثة حالياً
                 // (لأن مواد السنة الرابعة تتطلب اختصاصاً لم يُرفع من الإدارة بعد)
-                $newCoursesyear = [];
-                if ($canLoadNextYear && $student->year_of_study != 3) {
-                    $newCoursesyear = DB::table('courses')
-                        ->where('year_of_study', $student->year_of_study + 1)
-                        ->where('department', $student->department)
-                        ->where('semester', $semester)
-                        ->pluck('id')
-                        ->toArray();
-                }
+                // $newCoursesyear = [];
+                // if ($canLoadNextYear && $student->year_of_study != 3) {
+                //     $newCoursesyear = DB::table('courses')
+                //         ->where('year_of_study', $student->year_of_study + 1)
+                //         ->where('department', $student->department)
+                //         ->where('semester', $semester)
+                //         ->pluck('id')
+                //         ->toArray();
+                // }
 
                 // ثالثاً: دمج المواد المستهدفة بدون أي تكرار
-                $allTargetCourses = array_unique(array_merge($newCourses, $carriedCourses, $newCoursesyear));
+                $allTargetCourses = array_unique(array_merge($newCourses, $carriedCourses));
 
                 // رابعاً: حقن المواد المستهدفة في جدول التسجيل enrollments
                 foreach ($allTargetCourses as $courseId) {

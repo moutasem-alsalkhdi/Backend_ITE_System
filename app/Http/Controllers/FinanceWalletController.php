@@ -26,7 +26,7 @@ class FinanceWalletController extends Controller
 
         // جلب الطالب مع التأكد من أن دوره (student)
         $student = User::where('university_id', $request->university_id)
-            ->where('role', 'student')
+            ->whereIn('role', ['student', 'volunteer'])
             ->first();
 
         if (!$student) {
@@ -68,7 +68,7 @@ class FinanceWalletController extends Controller
 
         // 2️⃣ جلب بيانات الطالب والتأكد من أن حسابه بصلاحية (student)
         $student = User::where('university_id', $request->university_id)
-            ->where('role', 'student')
+            ->whereIn('role', ['student', 'volunteer'])
             ->first();
 
         if (!$student) {

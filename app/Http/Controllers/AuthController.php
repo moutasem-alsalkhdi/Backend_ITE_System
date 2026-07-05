@@ -50,7 +50,7 @@ class AuthController extends Controller
         ]);
 
         $user = User::where('university_id', $request->university_id)
-            ->where('role', 'student')
+            ->whereIn('role', ['student', 'volunteer'])
             ->first();
 
         if (!$user) {
@@ -68,6 +68,8 @@ class AuthController extends Controller
                 'exam_number'   => $user->exam_number,
                 'year_of_study' => $user->year_of_study,
                 'group_number'  => $user->group_number,
+                'department'    => $user->department,
+                'role'          => $user->role,
             ]
         ]);
     }

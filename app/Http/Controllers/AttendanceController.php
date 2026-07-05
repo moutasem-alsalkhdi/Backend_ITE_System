@@ -39,7 +39,7 @@ class AttendanceController extends Controller
             $isCourseInstructor = DB::table('course_assignments')
                 ->where('user_id', $doctoredId)
                 ->where('course_id', $request->course_id)
-                //->where('session_type', $request->session_type)
+                ->where('section_type', $request->session_type)
                 ->exists();
 
             if (!$isCourseInstructor && Auth::user()->role !== 'admin') {
@@ -126,27 +126,28 @@ class AttendanceController extends Controller
         ]);
 
         try {
+            $doctoredId = Auth::id();
             // جلب بيانات الجلسة
-            $session = DB::table('attendance_sessions')->find($request->session_id);
+            $session = DB::table('attendance_sessions')->where('opened_by', $doctoredId)->find($request->session_id);
             if (!$session) {
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'جلسة الحضور غير موجودة.'
+                    'message' => 'جلسة الحضور غير موجودة / فقط الدكتور الذي بدأ الجلسة يمكنه تسجيل حضورك.'
                 ], 404);
             }
 
             // التأكد من أن الجلسة لم تنتهِ بعد
-            // if ($session->ended_at !== null) {
-            //     return response()->json([
-            //         'status'  => 'error',
-            //         'message' => 'انتهت جلسة الحضور بالفعل ولا يمكن إضافة طلاب جدد.'
-            //     ], 400);
-            // }
-            
+            if ($session->ended_at !== null) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'انتهت جلسة الحضور بالفعل ولا يمكن إضافة طلاب جدد.'
+                ], 400);
+            }
+
 
             // جلب الطالب
             $student = User::where('qr_code', $request->qr_code)
-                ->where('role', 'student')
+                ->whereIn('role', ['student', 'volunteer'])
                 ->first();
 
             if (!$student) {
@@ -281,19 +282,23 @@ class AttendanceController extends Controller
                 if ($studentModel) {
                     $course = DB::table('courses')->where('id', $session->course_id)->first();
                     $type = $session->session_type === 'theoretical' ? 'نظري' : 'عملي';
-                    
+
                     if (in_array($student->id, $presentStudentIds)) {
+                        $title = 'تم تسجيل حضورك ✓';
+                        $body = "تم تسجيل حضورك في محاضرة {$type} لمادة {$course->name} (المحاضرة: {$session->lecture_number})";
                         // إشعار للحاضرين
                         $studentModel->notify(new SystemNotification(
-                            'تم تسجيل حضورك ✓',
-                            "تم تسجيل حضورك في محاضرة {$type} لمادة {$course->name} (المحاضرة: {$session->lecture_number})",
+                            $title,
+                            $body,
                             ['course_id' => $session->course_id, 'type' => 'attendance']
                         ));
                     } else {
+                        $title = 'تم تسجيل غيابك ✗';
+                        $body = "لم يتم تسجيل حضورك في محاضرة {$type} لمادة {$course->name} (المحاضرة: {$session->lecture_number})";
                         // إشعار للغائبين
                         $studentModel->notify(new SystemNotification(
-                            'تم تسجيل غيابك ✗',
-                            "لم يتم تسجيل حضورك في محاضرة {$type} لمادة {$course->name} (المحاضرة: {$session->lecture_number})",
+                            $title,
+                            $body,
                             ['course_id' => $session->course_id, 'type' => 'absence']
                         ));
                     }
@@ -370,14 +375,18 @@ class AttendanceController extends Controller
                 $doctor = DB::table('users')
                     ->where('id', $session->opened_by)
                     ->first();
+                $therole = DB::table('users')
+                    ->where('id', $session->opened_by)
+                    ->first();
 
                 $attendanceRecords[] = [
                     'lecture_number'  => $session->lecture_number,
                     'session_type'    => $session->session_type === 'theoretical' ? 'نظري' : 'عملي',
                     'status'          => $isPresent ? 'حاضر' : 'غائب',
-                    'doctor_name'     => $doctor->name ?? '—',
-                    'started_at'      => $session->started_at->format('Y-m-d H:i'),
-                    'ended_at'        => $session->ended_at->format('Y-m-d H:i'),
+                    'scanned_by'     => $doctor->name ?? '—',
+                    'the_role'         => $therole->role,
+                    'started_at'      => $session->started_at,
+                    'ended_at'        => $session->ended_at,
                 ];
             }
 
@@ -413,26 +422,41 @@ class AttendanceController extends Controller
         try {
             $studentId = Auth::id();
 
-            // جلب الجلسات المنتهية فقط
-            $attendanceSummary = DB::table('attendance_sessions')
+            // كل الجلسات المنتهية (من attendance_sessions) كأساس للعد الكلي
+            $totalSessions = DB::table('attendance_sessions')
                 ->join('courses', 'attendance_sessions.course_id', '=', 'courses.id')
-                ->where('attendance_sessions.student_id', $studentId)
+                ->where('attendance_sessions.ended_at', '!=', null)
                 ->select(
                     'courses.id as course_id',
                     'courses.name as course_name',
                     'attendance_sessions.session_type',
-                    DB::raw('COUNT(DISTINCT attendance_sessions.id) as total_sessions'),
-                    DB::raw('SUM(CASE WHEN attendance.student_id = ' . $studentId . ' THEN 1 ELSE 0 END) as attended_sessions')
+                    DB::raw('COUNT(DISTINCT attendance_sessions.id) as total_sessions')
                 )
-                ->leftJoin('attendance', function ($join) use ($studentId) {
-                    $join->on('attendance_sessions.id', '=', 'attendance.session_id');
-                })
                 ->groupBy('courses.id', 'courses.name', 'attendance_sessions.session_type')
-                ->get();
+                ->get()
+                ->keyBy(fn($row) => $row->course_id . '_' . $row->session_type);
+
+            // حضور الطالب الفعلي (من جدول attendances مباشرة عبر الموديل)
+            $attended = Attendance::where('student_id', $studentId)
+                ->select('course_id', 'session_type', DB::raw('COUNT(*) as attended_sessions'))
+                ->groupBy('course_id', 'session_type')
+                ->get()
+                ->keyBy(fn($row) => $row->course_id . '_' . $row->session_type);
+
+            $attendanceSummary = $totalSessions->map(function ($row) use ($attended) {
+                $key = $row->course_id . '_' . $row->session_type;
+                return [
+                    'course_id'         => $row->course_id,
+                    'course_name'       => $row->course_name,
+                    'session_type'      => $row->session_type,
+                    'total_sessions'    => $row->total_sessions,
+                    'attended_sessions' => $attended[$key]->attended_sessions ?? 0,
+                ];
+            })->values();
 
             return response()->json([
                 'status'              => 'success',
-                'attendance_summary' => $attendanceSummary
+                'attendance_summary'  => $attendanceSummary
             ], 200);
         } catch (Exception $e) {
             return response()->json([
@@ -444,29 +468,61 @@ class AttendanceController extends Controller
 
 
     public function getLectureAttendance(Request $request)
-{
-    $request->validate([
-        'course_id'      => 'required|integer|exists:courses,id',
-        'session_type'   => 'required|in:theoretical,practical',
-        'lecture_number' => 'required|string',
-        'scope'          => 'nullable|in:all,mine', // جديد
-    ]);
+    {
+        $request->validate([
+            'course_id'      => 'required|integer|exists:courses,id',
+            'session_type'   => 'required|in:theoretical,practical',
+            'lecture_number' => 'required|string',
+            'scope'          => 'nullable|in:all,mine', // جديد
+        ]);
 
-    try {
-        $scope = $request->input('scope', 'all'); // افتراضياً يعرض الكل
+        try {
+            $scope = $request->input('scope', 'all'); // افتراضياً يعرض الكل
 
-        $sessionsQuery = DB::table('attendance_sessions')
-            ->where('course_id', $request->course_id)
-            ->where('session_type', $request->session_type)
-            ->where('lecture_number', $request->lecture_number);
+            $sessionsQuery = DB::table('attendance_sessions')
+                ->where('course_id', $request->course_id)
+                ->where('session_type', $request->session_type)
+                ->where('lecture_number', $request->lecture_number);
 
-        if ($scope === 'mine') {
-            $sessionsQuery->where('opened_by', Auth::id());
-        }
+            if ($scope === 'mine') {
+                $sessionsQuery->where('opened_by', Auth::id());
+            }
 
-        $sessionIds = $sessionsQuery->pluck('id');
+            $sessionIds = $sessionsQuery->pluck('id');
 
-        if ($sessionIds->isEmpty()) {
+            if ($sessionIds->isEmpty()) {
+                return response()->json([
+                    'status' => 'success',
+                    'session_info' => [
+                        'course_id'      => $request->course_id,
+                        'session_type'   => $request->session_type,
+                        'lecture_number' => $request->lecture_number,
+                        'scope'          => $scope,
+                        'total_present'  => 0,
+                    ],
+                    'students' => [],
+                ], 200);
+            }
+
+            $attendanceRecords = Attendance::with(['student:id,name,university_id,group_number,exam_number'])
+                ->whereIn('session_id', $sessionIds)
+                ->orderBy('created_at', 'asc')
+                ->get()
+                ->unique('student_id');
+
+            $studentsList = $attendanceRecords->map(function ($record) {
+                if (!$record->student) return null;
+
+                return [
+                    'student_id'    => $record->student->id,
+                    'name'          => $record->student->name,
+                    'university_id' => $record->student->university_id,
+                    'group_number'  => $record->student->group_number,
+                    'exam_number'   => $record->student->exam_number,
+                    'attended_at'   => $record->created_at ? $record->created_at->format('H:i:s') : null,
+                ];
+            })->filter()->sortBy('name')->values();
+
             return response()->json([
                 'status' => 'success',
                 'session_info' => [
@@ -474,48 +530,16 @@ class AttendanceController extends Controller
                     'session_type'   => $request->session_type,
                     'lecture_number' => $request->lecture_number,
                     'scope'          => $scope,
-                    'total_present'  => 0,
+                    'total_present'  => $studentsList->count(),
+                    'sessions_count' => $sessionIds->count(),
                 ],
-                'students' => [],
+                'students' => $studentsList,
             ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'حدث خطأ أثناء جلب قائمة الحضور للطلبة: ' . $e->getMessage()
+            ], 500);
         }
-
-        $attendanceRecords = Attendance::with(['student:id,name,university_id,group_number,exam_number'])
-            ->whereIn('session_id', $sessionIds)
-            ->orderBy('created_at', 'asc')
-            ->get()
-            ->unique('student_id');
-
-        $studentsList = $attendanceRecords->map(function ($record) {
-            if (!$record->student) return null;
-
-            return [
-                'student_id'    => $record->student->id,
-                'name'          => $record->student->name,
-                'university_id' => $record->student->university_id,
-                'group_number'  => $record->student->group_number,
-                'exam_number'   => $record->student->exam_number,
-                'attended_at'   => $record->created_at ? $record->created_at->format('H:i:s') : null,
-            ];
-        })->filter()->sortBy('name')->values();
-
-        return response()->json([
-            'status' => 'success',
-            'session_info' => [
-                'course_id'      => $request->course_id,
-                'session_type'   => $request->session_type,
-                'lecture_number' => $request->lecture_number,
-                'scope'          => $scope,
-                'total_present'  => $studentsList->count(),
-                'sessions_count' => $sessionIds->count(),
-            ],
-            'students' => $studentsList,
-        ], 200);
-    } catch (Exception $e) {
-        return response()->json([
-            'status'  => 'error',
-            'message' => 'حدث خطأ أثناء جلب قائمة الحضور للطلبة: ' . $e->getMessage()
-        ], 500);
     }
-}
 }
