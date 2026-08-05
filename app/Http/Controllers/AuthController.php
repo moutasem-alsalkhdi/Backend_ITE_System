@@ -74,7 +74,10 @@ class AuthController extends Controller
         ]);
     }
 
-    // ─── تسجيل دكتور جديد (من الإدارة) ──────────────────
+    /**
+     * إضافة دكتور / معيد جديد
+     * POST /api/auth/doctor/register
+     */
     public function registerDoctor(Request $request)
     {
         if (Auth::user()->role !== 'admin') {

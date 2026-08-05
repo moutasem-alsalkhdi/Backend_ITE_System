@@ -16,11 +16,6 @@ class AttendanceController extends Controller
     /**
      * 1. بدء جلسة حضور جديدة (نقطة البداية)
      * POST /api/attendance/session/start
-     * 
-     * المعاملات:
-     *   - course_id: معرف المادة
-     *   - session_type: theoretical أو practical
-     *   - lecture_number: رقم المحاضرة (مثال: "Lecture 1")
      */
     public function startAttendanceSession(Request $request)
     {
@@ -113,10 +108,6 @@ class AttendanceController extends Controller
     /**
      * 2. مسح QR وتسجيل حضور الطالب
      * POST /api/attendance/record
-     * 
-     * المعاملات:
-     *   - session_id: معرف جلسة الحضور
-     *  
      */
     public function recordAttendance(Request $request)
     {
@@ -222,9 +213,6 @@ class AttendanceController extends Controller
     /**
      * 3. إنهاء جلسة الحضور وإرسال الإشعارات
      * POST /api/attendance/session/end
-     * 
-     * المعاملات:
-     *   - session_id: معرف جلسة الحضور
      */
     public function endAttendanceSession(Request $request)
     {
@@ -326,12 +314,8 @@ class AttendanceController extends Controller
     }
 
     /**
-     * 4. جلب سجل الحضور الكامل للطالب بناءً على المادة والنوع
+     * (نظري وعملي) جلب سجل الحضور الكامل للطالب بناءً على المادة والنوع
      * GET /api/student/attendance/detailed
-     * 
-     * المعاملات:
-     *   - course_id: معرف المادة
-     *   - session_type: theoretical أو practical (اختياري)
      */
     public function getDetailedAttendance(Request $request)
     {
@@ -414,7 +398,7 @@ class AttendanceController extends Controller
     }
 
     /**
-     * 5. جلب ملخص الحضور للطالب (محسوب بناءً على الجلسات المنتهية)
+     * جلب ملخص الحضور للطالب
      * GET /api/student/attendance
      */
     public function getStudentAttendance(Request $request)
@@ -466,14 +450,17 @@ class AttendanceController extends Controller
         }
     }
 
-
+    /**
+     * جلب قائمة الحضور لمادة معينة 
+     * GET /api/doctor/attendance/list
+     */
     public function getLectureAttendance(Request $request)
     {
         $request->validate([
             'course_id'      => 'required|integer|exists:courses,id',
             'session_type'   => 'required|in:theoretical,practical',
             'lecture_number' => 'required|string',
-            'scope'          => 'nullable|in:all,mine', // جديد
+            'scope'          => 'nullable|in:all,mine',
         ]);
 
         try {

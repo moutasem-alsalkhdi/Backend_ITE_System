@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Auth;
 
 class CourseAssignmentController extends Controller
 {
-    /**
-     * إسناد مادة (نظري أو عملي) لمجموعة من الدكاترة أو المعيدين
-     */
+    /*
+    * إسناد مادة (نظري أو عملي) لمجموعة من الدكاترة أو المعيدين
+    */
     public function assignStaff(Request $request)
     {
         $request->validate([
@@ -59,7 +59,9 @@ class CourseAssignmentController extends Controller
 
     /**
      * جلب قائمة المواد مع تفاصيل الكادر التدريسي (نظري وعملي) لفصل محدد وسنة محددة
-     * يدعم فلترة الآدمن، ويجلب للمدرس مواده المسندة إليه فقط تلقائياً.
+     * GET /api/admin/courses/assignments
+     * جلب للمدرس مواده المسندة إليه فقط
+     * GET /api/doctor/courses/assignments
      */
     public function getCourseAssignments(Request $request)
     {

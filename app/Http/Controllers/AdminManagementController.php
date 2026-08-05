@@ -64,9 +64,9 @@ class AdminManagementController extends Controller
     /**
      * جلب قائمة الدكاترة والمعيدين المسجّلين في النظام
      * GET /api/admin/doctors
-     *
-     * Query Params اختيارية:
-     *   - role : تصفية بالدور (doctor أو assistant) — افتراضياً يجلب الاثنين
+     * 
+     *  role : تصفية بالدور (doctor أو assistant) — 
+     * افتراضياً يجلب الاثنين
      */
     public function getDoctors(Request $request)
     {
@@ -101,6 +101,12 @@ class AdminManagementController extends Controller
             ], 500);
         }
     }
+
+    /*
+     *منح صلاحيات الفريق التطوعي
+     * PUT /api/admin/students/givevolunteerrole  الآدمن يمنح
+     * PUT /api/students/givevolunteerrole الطالب يمنح
+     */
 
     public function givevolunteerrole(Request $request)
     {

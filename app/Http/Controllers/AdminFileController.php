@@ -11,6 +11,10 @@ use Exception;
 
 class AdminFileController extends Controller
 {
+    /**
+     * إضافة (قوائم الطلاب وارقامهم الامتحانية و رقم الفئة)
+     * POST /api/import-excel
+     */
     public function importExcelData(Request $request)
     {
         $request->validate([
@@ -179,30 +183,5 @@ class AdminFileController extends Controller
 
         return response()->download($full_path, basename($file->file_url));
     }
-    public function getCourseFiles(int $course_id)
-    {
-        $files = DB::table('lecture_files')
-            ->where('course_id', $course_id)
-            ->where('is_archived', false)
-            ->join('users', 'lecture_files.uploaded_by', '=', 'users.id')
-            ->select(
-                'lecture_files.id',
-                'lecture_files.title',
-                'lecture_files.uploader_type',
-                'lecture_files.academic_year',
-                'lecture_files.uploaded_at',
-                'users.name as uploaded_by_name',
-            )
-            ->orderBy('lecture_files.uploaded_at', 'desc')
-            ->get();
 
-        if ($files->isEmpty()) {
-            return response()->json(['message' => 'لا توجد ملفات لهذه المادة'], 404);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'data'   => $files,
-        ]);
-    }
 }

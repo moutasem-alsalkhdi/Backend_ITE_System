@@ -16,46 +16,6 @@ class FinanceWalletController extends Controller
 {
 
     /**
-     * 1. البحث عن الطالب وعرض رصيد محفظته الحالي
-     */
-    public function searchStudent(Request $request)
-    {
-        $request->validate([
-            'university_id' => 'required|string',
-        ]);
-
-        // جلب الطالب مع التأكد من أن دوره (student)
-        $student = User::where('university_id', $request->university_id)
-            ->whereIn('role', ['student', 'volunteer'])
-            ->first();
-
-        if (!$student) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'عذراً، لم يتم العثور على طالب بهذا الرقم الجامعي.'
-            ], 404);
-        }
-
-        // جلب المحفظة أو إنشاؤها فوراً برصيد 0 إذا لم تكن موجودة مسبقاً
-        $wallet = Wallet::firstOrCreate(
-            ['user_id' => $student->id],
-            ['balance' => 0.00]
-        );
-
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'student_id'    => $student->id,
-                'name'          => $student->name,
-                'university_id' => $student->university_id,
-                'department'    => $student->department,
-                'year_of_study' => $student->year_of_study,
-                'current_balance' => (float) $wallet->balance
-            ]
-        ]);
-    }
-
-    /**
      * 2. شحن محفظة الطالب (Credit Process)
      */
     public function chargeWallet(Request $request)

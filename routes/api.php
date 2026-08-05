@@ -25,105 +25,95 @@ Route::post('/auth/doctor/request-otp', [AuthController::class, 'requestOtp']);
 Route::post('/auth/doctor/login',       [AuthController::class, 'doctorLogin']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    // ════════════════════════════════════════
+    // ADMIN APIs
+    // ════════════════════════════════════════
 
-    Route::post('/admin/create', [AdminManagementController::class, 'storeAdmin']);
-    // رابط تغيير كلمة المرور للمستخدم الحالي (آدمن، دكتور، طالب...)
-    Route::post('/user/change-password', [AuthController::class, 'changePassword']);
-
-    // ── عرض الدكاترة والمعيدين ──────────────────────────────────────────
-    Route::get('/admin/doctors', [AdminManagementController::class, 'getDoctors']);
-    Route::put('/admin/students/givevolunteerrole', [AdminManagementController::class, 'givevolunteerrole']);
-    Route::put('/students/givevolunteerrole', [AdminManagementController::class, 'givevolunteerrole']);
-
-    // روابط إسناد وإدارة مواد الدكاترة والمعيدين للآدمن
-    Route::post('/admin/courses/assign-staff', [CourseAssignmentController::class, 'assignStaff']);
-    Route::get('/courses/assignments', [CourseAssignmentController::class, 'getCourseAssignments']);
+    Route::post('/admin/create', [AdminManagementController::class, 'storeAdmin']); // إضافة آدمن جديد
  
-    Route::post('/auth/doctor/register',    [AuthController::class, 'registerDoctor']);
+    Route::post('/user/change-password', [AuthController::class, 'changePassword']); // تغيير كلمة المرورالحالية
 
-    // رابط فتح الفصل الدراسي الجديد وتهيئة مواد كل الطلاب تلقائياً
-    Route::post('/admin/semester/open', [EnrollmentController::class, 'openNewSemester']);
-    Route::get('/admin/semester/current', [EnrollmentController::class, 'getCurrentSemester']);
-    Route::post('/import-excel', [AdminFileController::class, 'importExcelData']);
-    // رابط جلب معلومات المواد (مع إمكانية الفرز والتصفية)
-    Route::get('/courses/info', [CourseController::class, 'getCoursesInfo']);
-    Route::get('/student/my-enrolled-courses', [CourseController::class, 'getMyEnrolledCourses']);
-    Route::get('/student/eligible-courses', [CourseController::class, 'getEligibleCourses']);
-    Route::get('/student/getSemesterCourses', [CourseController::class, 'getSemesterCourses']);
+    Route::get('/admin/doctors', [AdminManagementController::class, 'getDoctors']); // جلب قائمة الدكاترة والمعيدين المسجّلين في النظام
+    Route::put('/admin/students/givevolunteerrole', [AdminManagementController::class, 'givevolunteerrole']); //منح الآدمن الطالب صلاحيات الفريق التطوعي
+
+    Route::post('/admin/courses/assign-staff', [CourseAssignmentController::class, 'assignStaff']); //إسناد مادة (نظري أو عملي) لمجموعة من الدكاترة أو المعيدين
+    Route::get('/admin/courses/assignments', [CourseAssignmentController::class, 'getCourseAssignments']); //جلب قائمة المواد مع تفاصيل الكادر التدريسي
+ 
+    Route::post('/auth/doctor/register', [AuthController::class, 'registerDoctor']); //إضافة دكتور / معيد جديد
+
+    Route::post('/admin/semester/open', [EnrollmentController::class, 'openNewSemester']); // فتح فصل دراسي جديد وتهيئة مواد كل الطلاب تلقائياً
     
-    Route::post('/LectureFile/upload-lecfile', [LectureFileController::class, 'uploadLectureFile']);
-    Route::get('/LectureFile', [LectureFileController::class, 'index']);    // جلب محاضرات مادة معينة   
+    Route::post('/import-excel', [AdminFileController::class, 'importExcelData']); //إضافة (قوائم الطلاب وارقامهم الامتحانية و رقم الفئة)
+    
+    Route::get('/courses/info', [CourseController::class, 'getCoursesInfo']); // جلب معلومات المواد (مع إمكانية الفرز والتصفية حسب السنة والقسم)
+    
+    Route::post('/admin/grades/import-excel', [GradeController::class, 'importExcelGrades']); //تصدير ومعالجة درجات الطلاب من ملف Excel أو CSV
+    
+    Route::put('/admin/grades/exceptional-modify', [GradeController::class, 'exceptionalModify']); // التعديل الاستثنائي للعلامات
+
+    Route::post('/admin/schedules', [ScheduleController::class, 'uploadSchedule']); //رفع جدول دراسي
+
+    Route::post('/admin/course-deadlines', [ServiceRequestController::class, 'setCourseDeadline']); //تحديد أو تحديث الموعد النهائي للاعتراض/إعادة العملي لمادة معينة
+
+    Route::get('/admin/service-requests', [ServiceRequestController::class, 'getAdminRequests']); //جلب وتصنيف طلبات الخدمات الطلابية للإدارة
+    
+    Route::put('/admin/requests/{id}/status', [ServiceRequestController::class, 'updateStatus']); //تحديث حالة الطلب وإضافة الرسوم والملاحظات
+   
+    Route::get('/student/search', [StudentController::class, 'searchStudent']); //البحث عن طالب بواسطة الرقم الجامعي وعرض معلوماته
+
+    Route::post('/finance/wallet/charge', [FinanceWalletController::class, 'chargeWallet']); //شحن المحفظة برصيد
+
+
+    
+    // ════════════════════════════════════════
+    // DOCTOR APIs
+    // ════════════════════════════════════════
+    Route::get('/doctor/courses/assignments', [CourseAssignmentController::class, 'getCourseAssignments']); //جلب للمدرس مواده المسندة إليه فقط
+    Route::get('/doctor/attendance/list', [AttendanceController::class, 'getLectureAttendance']); //جلب قائمة الحضور لمادة معينة 
+    Route::post('/attendance/session/start', [AttendanceController::class, 'startAttendanceSession']); //1. بدء جلسة حضور جديدة
+    Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance']); //2. مسح QR وتسجيل حضور الطالب
+    Route::post('/attendance/session/end', [AttendanceController::class, 'endAttendanceSession']); // 3. إنهاء جلسة الحضور وإرسال الإشعارات
+    Route::get('/student/attendance', [AttendanceController::class, 'getStudentAttendance']); //جلب ملخص الحضور للطالب
+
+    // ════════════════════════════════════════
+    // STUDENT APIs
+    // ════════════════════════════════════════
+
+    Route::put('/students/givevolunteerrole', [AdminManagementController::class, 'givevolunteerrole']); //منح الطالب الطالب صلاحيات الفريق التطوعي
+    Route::get('/student/my-enrolled-courses', [CourseController::class, 'getMyEnrolledCourses']); //جلب مواد الطالب المسجل بيها بالفصل الدراسي الحالي
+    Route::get('/student/eligible-courses', [CourseController::class, 'getEligibleCourses']); //المواد التي لها مواعيد نهائية فعالة ولم تنتهِ بعد
+    Route::get('/student/getSemesterCourses', [CourseController::class, 'getSemesterCourses']); //جلب مواد الطالب في الفصل الحالي والسنة الدراسية الحالية (تفيد الفريق التطوعي)
+    Route::get('/student/courses-by-year', [CourseController::class, 'getCoursesByYear']); //جلب كل مواد سنة دراسية معينة (لقسم الطالب الحالي) — لمستودع المحاضرات
+    Route::get('/student/academic-record', [GradeController::class, 'getAcademicRecord']); //السجل الأكاديمي للعلامات
+    Route::get('/student/profile', [StudentController::class, 'getProfile']); //جلب بيانات الملف الشخصي للطالب
+    Route::get('/announcements', [AnnouncementController::class, 'getAnnouncements']); //جلب الإعلانات
+    Route::get('/student/schedules', [ScheduleController::class, 'getSchedules']); //استعراض الجداول الدراسية للطالب (مع ميزة التصفح)
+    Route::post('/student/requests', [ServiceRequestController::class, 'submitRequest']); //تقديم طلب إداري
+    Route::get('/student/requests', [ServiceRequestController::class, 'getStudentRequests']); //استعراض الطالب لطلباته الشخصية وتتبع حالاتها
+
+    Route::get('/notifications', [NotificationController::class, 'index']); //جلب كافة الإشعارات الخاصة بالمستخدم الحالي
+    Route::get('/notifications/unread', [NotificationController::class, 'unread']); //جلب الإشعارات غير المقروءة فقط
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']); //تحويل إشعار معين إلى "مقروء"
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']); //تعيين كافة الإشعارات كمقروءة دفعة واحدة
+    Route::delete('/notifications/{id}',[NotificationController::class, 'deleteNotification']); //حذف إشعار معين نهائياً
+
+    Route::get('/student/wallet/balance',[WalletController::class, 'getBalance']); //عرض رصيد المحفظة الحالي للطالب المسجّل دخوله
+    Route::get('/student/wallet/transactions',[WalletController::class, 'getTransactions']); //عرض سجل المعاملات المالية للطالب (شحن + دفع)
+    Route::post('/student/wallet/pay',[WalletController::class, 'payForService']); //دفع مبلغ مقابل طلب والخصم من المحفظة
+    Route::get('/student/attendance/detailed', [AttendanceController::class, 'getDetailedAttendance']); //جلب سجل الحضور الكامل للطالب بناءً على المادة والنوع (نظري وعملي)
+    
+
+
+    // ════════════════════════════════════════
+    // SHARED APIs
+    // ════════════════════════════════════════
+    Route::get('/semester/current', [EnrollmentController::class, 'getCurrentSemester']); //جلب بيانات (السنة الاكاديمية والفصل الدراسي) الحالي والنشط في النظام
+    Route::post('/LectureFile/upload-lecfile', [LectureFileController::class, 'uploadLectureFile']); //رفع ملفات المحاضرات (الدكتور و الفريق التطوعي)
+    Route::get('/LectureFile/getCourseLectures', [LectureFileController::class, 'getCourseLectures']); // جلب محاضرات مادة معينة   
+    Route::get('/LectureFile/archived', [LectureFileController::class, 'archivedfiles']); // جلب المحاضرات المؤرشفة
     Route::get('/LectureFile/download/{id}', [LectureFileController::class, 'download']); // تحميل ملف محاضرة
-    // DELETE /api/LectureFile/{id}        → حذف نهائي من قاعدة البيانات والسيرفر — صاحب الملف
-    Route::delete('/LectureFile/{id}',[LectureFileController::class, 'deleteFile']);
-
-
-    //Route::post('/attendance/record-qr', [AttendanceController::class, 'recordAttendanceByQr']);
-    // المسار الجديد الخاص بالطالب لاستعراض حضوره
-  
-    Route::get('/doctor/attendance/list', [AttendanceController::class, 'getLectureAttendance']);
-    //  صلاحيات الإدارة الجامعية والكنترول (Admin / Control Panel)
-    Route::post('/admin/grades/import-excel', [GradeController::class, 'importExcelGrades']);
-    // 1. التعديل الاستثنائي للعلامات
-    Route::put('/admin/grades/exceptional-modify', [GradeController::class, 'exceptionalModify']);
-
-    // 2. جلب السجل الأكاديمي (للطالب لعلاماته، أو للإدمن لعلامات أي طالب)
-    Route::get('/student/academic-record', [GradeController::class, 'getAcademicRecord']);
-    Route::get('/student/profile', [StudentController::class, 'getProfile']);
-    Route::post('/academic/announcements', [AnnouncementController::class, 'createAnnouncement']);
-    Route::get('/announcements', [AnnouncementController::class, 'getAnnouncements']);
-
-    // 1. رابط الإدارة لرفع جدول دراسي جديد
-    Route::post('/admin/schedules', [ScheduleController::class, 'uploadSchedule']);
-
-    // 2. رابط الطلاب لاستعراض الجداول (الافتراضي و الفلترة المرنة)
-    Route::get('/student/schedules', [ScheduleController::class, 'getSchedules']);
-
-    // رابط تحديد المواعيد النهائية للمواد من قبل الإدارة
-    Route::post('/admin/course-deadlines', [ServiceRequestController::class, 'setCourseDeadline']);
-
-    // 1. روابط الطلاب (تقديم واستعراض وتتبع الطلبات)
-    Route::post('/student/requests', [ServiceRequestController::class, 'submitRequest']);
-    Route::get('/student/requests', [ServiceRequestController::class, 'getStudentRequests']);
-    // رابط لوحة تحكم الإدارة لجلب وتصنيف الطلبات
-    Route::get('/admin/service-requests', [ServiceRequestController::class, 'getAdminRequests']);
-
-    // 2. رابط الإدارة (تعديل الحالة، إضافة الرسوم والملاحظات والإشعارات)
-    Route::put('/admin/requests/{id}/status', [ServiceRequestController::class, 'updateStatus']);
-    //Route::post('/services/requests/{id}/update-status', [FinanceWalletController::class, 'updateRequestStatus']);
-
-    // روابط نظام الإشعارات 🔔
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::get('/notifications/unread', [NotificationController::class, 'unread']);
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-    Route::delete('/notifications/{id}',[NotificationController::class, 'deleteNotification']);
-
-    // مسار البحث عن طالب بواسطة الرقم الجامعي
-    Route::get('/finance/student/search', [FinanceWalletController::class, 'searchStudent']);
-    // مسار شحن الرصيد كاش
-    Route::post('/finance/wallet/charge', [FinanceWalletController::class, 'chargeWallet']);
-    // مسار قيام الآدمن بتحديث حالة الطلب وتحديد السعر المستحق
-
-    Route::get('/student/wallet/balance',[WalletController::class, 'getBalance']);
-    Route::get('/student/wallet/transactions',[WalletController::class, 'getTransactions']);
-    Route::post('/student/wallet/pay',[WalletController::class, 'payForService']);
-
-    // أضف هذه الروابط الجديدة:
-
-    // ── جلسات الحضور الجديدة ──
-    Route::post('/attendance/session/start', [AttendanceController::class, 'startAttendanceSession']);
-    Route::post('/attendance/session/end', [AttendanceController::class, 'endAttendanceSession']);
-    Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance']);
-    
-    // ── جلب سجل الحضور التفصيلي ──
-    Route::get('/student/attendance/detailed', [AttendanceController::class, 'getDetailedAttendance']);
-    Route::get('/student/attendance', [AttendanceController::class, 'getStudentAttendance']);
-
-
-
+    Route::delete('/LectureFile/{id}',[LectureFileController::class, 'deleteFile']); //حذف ملف محاضرة (الدكتور و الفريق التطوعي) نهائيا من قاعدة البيانات والسيرفر
+    Route::post('/academic/announcements', [AnnouncementController::class, 'createAnnouncement']); //نشر إعلان جديد من قبل الدكتور أو الإدارة
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
-
-Route::get('/students/pdf/{id}', [AdminFileController::class, 'downloadFile']);

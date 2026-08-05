@@ -7,10 +7,12 @@ use Illuminate\Http\Request;
 use Exception;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\DB;
 class LectureFileController extends Controller
 {
-
+    /**
+     * رفع ملفات المحاضرات (الدكتور و الفريق التطوعي) 
+     */
     public function uploadLectureFile(Request $request)
     {
         $currentUser = $request->user();
@@ -63,8 +65,11 @@ class LectureFileController extends Controller
             ], 500);
         }
     }
-
-    public function index(Request $request)
+    /**
+     * جلب محاضرات مادة معينة
+     * GET /api/LectureFile/getCourseLectures
+     */
+    public function getCourseLectures(Request $request)
     {
         $request->validate([
             'course_id'     => 'required|integer|exists:courses,id',
@@ -97,7 +102,45 @@ class LectureFileController extends Controller
 
 
     /**
+     * جلب المحاضرات المؤرشفة
+     * GET /api/LectureFile/archived
+     */
+    public function archivedfiles(Request $request)
+    {
+        $request->validate([
+            'course_id'     => 'required|integer|exists:courses,id',
+            'uploader_type' => 'nullable|in:doctor,volunteer',
+        ]);
+
+        try {
+            $query = LectureFile::with(['course', 'uploader:id,name'])
+                ->where('course_id', $request->query('course_id'))
+                ->where('is_archived', true);
+
+            if ($request->filled('uploader_type')) {
+                $query->where('uploader_type', $request->query('uploader_type'));
+            }
+
+            $lectures = $query->orderBy('uploaded_at', 'desc')->get();
+
+            return response()->json([
+                'status'  => 'success',
+                'count'   => $lectures->count(),
+                'data'    => $lectures
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'حدث خطأ أثناء جلب المحاضرات: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    /**
      * @param int|string $id
+     * تحميل ملف محاضرة
+     * GET /api/LectureFile/download/{id}
      */
     public function download($id)
     {
@@ -136,59 +179,10 @@ class LectureFileController extends Controller
             ], 500);
         }
     }
-    /**
-     * أرشفة ملف محاضرة (إخفاؤه بدون حذف فيزيائي)
-     * PUT /api/LectureFile/{id}/archive
-     *
-     * الصلاحية: الدكتور الذي رفع الملف أو الآدمن فقط
-     */
-    public function archiveFile($id)
-    {
-        try {
-            $user    = Auth::user();
-            $lecture = LectureFile::find($id);
-
-            if (!$lecture) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'الملف المطلوب غير موجود.'
-                ], 404);
-            }
-
-
-            if ($user->role !== 'admin') {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'غير مصرح لك بأرشفة هذا الملف.'
-                ], 403);
-            }
-
-            if ($lecture->is_archived) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'هذا الملف مؤرشَف بالفعل.'
-                ], 400);
-            }
-
-            $lecture->update(['is_archived' => true]);
-
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'تم أرشفة الملف بنجاح، لن يظهر للطلاب بعد الآن.'
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'حدث خطأ أثناء أرشفة الملف: ' . $e->getMessage()
-            ], 500);
-        }
-    }
 
     /**
      * حذف ملف محاضرة نهائياً (من قاعدة البيانات ومن السيرفر)
      * DELETE /api/LectureFile/{id}
-     *
-     *الصلاحية: الدكتور الذي رفع الملف 
      */
     public function deleteFile($id)
     {

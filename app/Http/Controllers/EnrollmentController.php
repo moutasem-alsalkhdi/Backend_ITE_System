@@ -11,23 +11,21 @@ use Exception;
 class EnrollmentController extends Controller
 {
     /**
-     * فتح فصل دراسي جديد وتهيئة مواد جميع الطلاب (المستجدة والمحملة) بضغطة زر واحدة
+     * فتح فصل دراسي جديد وتهيئة مواد جميع الطلاب (المستجدة والمحملة) 
      * POST /api/admin/semester/open
      */
     public function openNewSemester(Request $request)
     {
-        // 1. التحقق من المدخلات القادمة من شؤون الطلاب
         $request->validate([
-            'academic_year' => 'required|string',       // مثال: "2025-2026"
-            'semester'      => 'required|integer|in:1,2', // 1: أول، 2: ثاني
+            'academic_year' => 'required|string',
+            'semester'      => 'required|integer|in:1,2',
         ]);
 
         $academicYear = $request->input('academic_year');
         $semester      = $request->input('semester');
 
         try {
-            // 2. جلب جميع الطلاب المسجلين بالكلية
-            $students = DB::table('users')->where('role', ['student', 'volunteer'])->get();
+            $students = DB::table('users')->whereIn('role', ['student', 'volunteer'])->get(); // ← مصحح
 
             if ($students->isEmpty()) {
                 return response()->json([
@@ -37,21 +35,19 @@ class EnrollmentController extends Controller
             }
 
             DB::beginTransaction();
+            if($semester==1)
 
-            // ─── الخطوة الأولى: أرشفة جميع ملفات المحاضرات النشطة ────────────────
             DB::table('lecture_files')
                 ->where('is_archived', false)
                 ->update(['is_archived' => true]);
 
-            // ─── الخطوة الثانية: تسجيل الطلاب في مواد الفصل الجديد ──────────────
             $processedStudentsCount = 0;
 
             foreach ($students as $student) {
-
-                // أولاً: جلب المواد المستجدة الخاصة بسنة الطالب الحالية وفصله الدراسي الحالي
+                $courseDepartment = $student->year_of_study <= 3 ? 'Basic Sciences' : $student->department;
                 $newCourses = DB::table('courses')
                     ->where('year_of_study', $student->year_of_study)
-                    ->where('department', $student->department)
+                    ->where('department', $courseDepartment)
                     ->where('semester', $semester)
                     ->whereNotIn('id', function ($query) use ($student) {
                         $query->select('course_id')
@@ -62,7 +58,6 @@ class EnrollmentController extends Controller
                     ->pluck('id')
                     ->toArray();
 
-                // ثانياً: جلب المواد المحملة وعلاماتها
                 $carriedCoursesRaw = DB::table('grades')
                     ->where('student_id', $student->id)
                     ->where('status', 'fail')
@@ -74,68 +69,58 @@ class EnrollmentController extends Controller
                     })
                     ->get(['course_id', 'total_score']);
 
-                // تصفية المواد المحملة لضمان عدم التكرار
                 $carriedCoursesMap = [];
                 foreach ($carriedCoursesRaw as $row) {
                     if (!isset($carriedCoursesMap[$row->course_id]) || $row->total_score > $carriedCoursesMap[$row->course_id]) {
                         $carriedCoursesMap[$row->course_id] = $row->total_score;
                     }
                 }
-
                 $carriedCourses = array_keys($carriedCoursesMap);
-                $count = count($carriedCourses);
+
+                // مواد الفصل الماضي اللي لسا بدون أي علامة مرصودة إطلاقاً
+                $previousSemester = $semester == 1 ? 2 : 1;
+                $yearParts = explode('-', $academicYear);
+                $previousAcademicYear = $semester == 1
+                    ? (intval($yearParts[0]) - 1) . '-' . (intval($yearParts[1]) - 1)
+                    : $academicYear;
+
+                $ungradedCourses = DB::table('enrollments')
+                    ->where('student_id', $student->id)
+                    ->where('academic_year', $previousAcademicYear)
+                    ->where('semester', $previousSemester)
+                    ->whereNotIn('course_id', function ($query) use ($student) {
+                        $query->select('course_id')
+                            ->from('grades')
+                            ->where('student_id', $student->id);
+                    })
+                    ->pluck('course_id')
+                    ->toArray();
+
+                $count = count($carriedCourses) + count($ungradedCourses);
 
                 $studentModel = User::find($student->id);
-
-                if ($studentModel) {
-                    if ($count > 5) {
-                        $title = 'تنبيه: مواد محملة';
-                        $body = "لديك {$count} مادة محملة من الفصول السابقة. يرجى مراجعة جدولك الدراسي.";
-
-                        $studentModel->notify(new SystemNotification($title, $body, ['type' => 'carried_courses']));
-
-                    }
+                if ($studentModel && $count > 5) {
+                    $title = 'تنبيه: مواد محملة';
+                    $body = "لديك {$count} مادة محملة من الفصول السابقة. يرجى مراجعة جدولك الدراسي.";
+                    $studentModel->notify(new SystemNotification($title, $body, ['type' => 'carried_courses']));
                 }
 
-                if ($count > 5) {
-                }
-
-                // فحص شروط مواد الرأفة والمساعدة للتحميل
                 $canLoadNextYear = true;
                 if ($count > 4) {
                     $canLoadNextYear = false;
                     $failGrades = array_values($carriedCoursesMap);
 
                     if ($count == 5) {
-                        $matchingGrades = array_filter($failGrades, function ($g) {
-                            return $g == 58 || $g == 59;
-                        });
+                        $matchingGrades = array_filter($failGrades, fn($g) => $g == 58 || $g == 59);
                         if (count($matchingGrades) >= 1) $canLoadNextYear = true;
                     } elseif ($count == 6) {
-                        $matchingGrades = array_filter($failGrades, function ($g) {
-                            return $g == 59;
-                        });
+                        $matchingGrades = array_filter($failGrades, fn($g) => $g == 59);
                         if (count($matchingGrades) >= 2) $canLoadNextYear = true;
                     }
                 }
 
-                // 💡 التعديل الذكي هنا:
-                // جلب مواد السنة التالية فقط إذا نجح في الشروط، وبشرط ألا يكون الطالب في السنة الثالثة حالياً
-                // (لأن مواد السنة الرابعة تتطلب اختصاصاً لم يُرفع من الإدارة بعد)
-                // $newCoursesyear = [];
-                // if ($canLoadNextYear && $student->year_of_study != 3) {
-                //     $newCoursesyear = DB::table('courses')
-                //         ->where('year_of_study', $student->year_of_study + 1)
-                //         ->where('department', $student->department)
-                //         ->where('semester', $semester)
-                //         ->pluck('id')
-                //         ->toArray();
-                // }
+                $allTargetCourses = array_unique(array_merge($newCourses, $carriedCourses, $ungradedCourses));
 
-                // ثالثاً: دمج المواد المستهدفة بدون أي تكرار
-                $allTargetCourses = array_unique(array_merge($newCourses, $carriedCourses));
-
-                // رابعاً: حقن المواد المستهدفة في جدول التسجيل enrollments
                 foreach ($allTargetCourses as $courseId) {
                     DB::table('enrollments')->updateOrInsert(
                         [
@@ -144,9 +129,7 @@ class EnrollmentController extends Controller
                             'academic_year' => $academicYear,
                             'semester'      => $semester
                         ],
-                        [
-                            'enrolled_at'   => now()
-                        ]
+                        ['enrolled_at' => now()]
                     );
                 }
 
@@ -169,8 +152,8 @@ class EnrollmentController extends Controller
     }
 
     /**
-     * جلب بيانات الفصل الدراسي الحالي والنشط في النظام
-     * GET /api/admin/semester/current
+     * جلب بيانات (السنة الاكاديمية والفصل الدراسي) الحالي والنشط في النظام
+     * GET /api/semester/current
      */
     public function getCurrentSemester()
     {

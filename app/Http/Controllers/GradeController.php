@@ -16,12 +16,12 @@ use App\Notifications\SystemNotification;
 class GradeController extends Controller
 {
     /**
-     * 1. استيراد ومعالجة درجات الطلاب من ملف Excel أو CSV
+     *  تصدير ومعالجة درجات الطلاب من ملف Excel أو CSV
      * POST /api/admin/grades/import-excel
      */
     public function importExcelGrades(Request $request)
     {
-        // 1. إضافة نوع الامتحان للتحقق (عملي أو نظري)
+    
         $request->validate([
             'excel_file'    => 'required|file|extensions:csv,xlsx,xls',
             'course_id'     => 'required|integer',
@@ -243,8 +243,7 @@ class GradeController extends Controller
     }
 
     /**
-     * 2. التعديل والرصد الاستثنائي الفردي للعلامات (خاص بالإدارة والكنترول)
-     * يقبل التعديل والحفظ الشامل حتى لو كان الطالب ناجحاً مسبقاً 🎯
+     * التعديل الاستثنائي للعلامات
      * PUT /api/admin/grades/exceptional-modify
      */
     public function exceptionalModify(Request $request)
@@ -393,7 +392,7 @@ class GradeController extends Controller
     }
 
     /**
-     * 3. السجل الأكاديمي الرقمي (خاص بالطالب المسجل دخوله حالياً فقط)
+     * السجل الأكاديمي للعلامات (خاص بالطالب المسجل دخوله حالياً)
      * GET /api/student/academic-record
      */
     public function getAcademicRecord(Request $request)

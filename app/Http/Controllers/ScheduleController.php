@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Notification;
 class ScheduleController extends Controller
 {
     /**
-     * 1. رفع جدول دراسي جديد (خاص بالإدارة/الأساتذة المخولين)
+     * رفع جدول دراسي
      * POST /api/admin/schedules
      */
     public function uploadSchedule(Request $request)
@@ -107,7 +107,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * 2. استعراض الجداول الدراسية (للطالب مع ميزة التصفح المرن)
+     * استعراض الجداول الدراسية للطالب (مع ميزة التصفح)
      * GET /api/student/schedules
      */
     public function getSchedules(Request $request)

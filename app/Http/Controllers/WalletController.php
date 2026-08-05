@@ -103,9 +103,12 @@ class WalletController extends Controller
             ], 500);
         }
     }
+    /**
+     *دفع مبلغ مقابل طلب والخصم من المحفظة
+     */
     public function payForService(Request $request)
     {
-        // 1. نستقبل فقط معرف الطلب الأكاديمي، ولا نقبل أي حقل مالي من الفرونت إند
+       
         $request->validate([
             'service_request_id' => 'required|integer|exists:service_requests,id',
         ]);

@@ -10,7 +10,7 @@ use Exception;
 class AnnouncementController extends Controller
 {
     /**
-     * نشر إعلان جديد من قبل الدكتور أو الإدارة (يدعم الصور والملفات)
+     * نشر إعلان جديد من قبل الدكتور أو الإدارة
      * POST /api/academic/announcements
      */
     public function createAnnouncement(Request $request)
@@ -68,7 +68,7 @@ class AnnouncementController extends Controller
         }
     }
     /**
-     * جلب الإعلانات مع تصفية ذكية حسب دور المستخدم
+     * جلب الإعلانات
      * GET /api/announcements
      */
     public function getAnnouncements(Request $request)

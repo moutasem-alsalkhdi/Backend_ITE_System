@@ -14,7 +14,7 @@ class ServiceRequestController extends Controller
 {
     /**
      * جلب وتصنيف طلبات الخدمات الطلابية للإدارة
-     * GET /api/admin/service-requests?status=pending&page=1
+     * GET /api/admin/service-requests
      */
     public function getAdminRequests(Request $request)
     {
@@ -76,78 +76,11 @@ class ServiceRequestController extends Controller
             ], 500);
         }
     }
+
     /**
-     * 1. تقديم طلب إداري جديد (خاص بالطالب)
+     * تقديم طلب إداري
      * POST /api/student/requests
      */
-    // public function submitRequest(Request $request)
-    // {
-    //     // التحقق من المدخلات الأساسية
-    //     $request->validate([
-    //         'request_type' => 'required|in:grade_sheet,objection,lab_redo,life_cert',
-    //         'course_id'    => 'required_if:request_type,objection,lab_redo|integer',
-    //         'objection_type' => 'required_if:request_type,objection|in:practical,theoretical', // مطلوب فقط للاعتراض أو الإعادة العملي
-    //     ]);
-
-    //     $student_id = Auth::id();
-    //     $requestType = $request->input('request_type');
-    //     $courseId = $request->input('course_id');
-
-    //     try {
-    //         // 🎯 الفحص البرمجي للموعد النهائي (الاطار الزمني للاعتراضات وإعادة العملي)
-    //         if (in_array($requestType, ['objection', 'lab_redo'])) {
-
-    //             // جلب الموعد النهائي المحدد لهذه المادة من جدول مواعيد المواد
-    //             $deadlineInfo = DB::table('course_deadlines') // جدول افتراضي للمواعيد حددته الإدارة
-    //                 ->where('course_id', $courseId)
-    //                 ->where('request_type', $requestType)
-    //                 ->first();
-
-    //             // إذا حددت الإدارة موعداً وانتهى، نمنع الطالب فوراً من التقديم
-    //             if ($deadlineInfo && now()->gt($deadlineInfo->end_date)) {
-    //                 return response()->json([
-    //                     'status'  => 'error',
-    //                     'message' => 'عذراً، لقد انتهت المهلة الزمنية المتاحة لتقديم هذا النوع من الطلبات لهذه المادة.'
-    //                 ], 400);
-    //             }
-    //             // إذا كان الطلب هو إعادة القسم العملي
-    //             if ($requestType === 'lab_redo') {
-    //                 // جلب بيانات المادة للتأكد من توزيع علاماتها
-    //                 $course = DB::table('courses')->where('id', $courseId)->first();
-
-    //                 // إذا كانت العلامة العظمى للعملي تساوي 0، فهذا يعني أن المادة ليس لها عملي أصلاً!
-    //                 if ($course && $course->practical_max_mark == 0) {
-    //                     return response()->json([
-    //                         'status'  => 'error',
-    //                         'message' => "عذراً، مادة '{$course->name}' هي مادة نظرية بالكامل ولا تحتوي على قسم عملي لتقديم طلب إعادة فيه."
-    //                     ], 400);
-    //                 }
-    //             }
-    //         }
-
-    //         // إدراج الطلب في قاعدة البيانات (الحالة الافتراضية pending تلقائياً من الـ Schema)
-    //         DB::table('service_requests')->insert([
-    //             'student_id'   => $student_id,
-    //             'course_id'    => $courseId,
-    //             'request_type' => $requestType,
-    //             'objection_type' => $request->input('objection_type'),
-    //             'status'       => 'pending',
-    //             'created_at'   => now(),
-    //             'updated_at'   => now(),
-    //         ]);
-
-    //         return response()->json([
-    //             'status'  => 'success',
-    //             'message' => 'تم تقديم طلبك بنجاح، وهو الآن قيد الانتظار والمراجعة من قبل شؤون الطلاب.'
-    //         ], 201);
-    //     } catch (Exception $e) {
-    //         return response()->json([
-    //             'status'  => 'error',
-    //             'message' => 'حدث خطأ أثناء إرسال الطلب: ' . $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
-
     public function submitRequest(Request $request)
     {
         // التحقق من المدخلات الأساسية
@@ -236,7 +169,7 @@ class ServiceRequestController extends Controller
     }
 
     /**
-     * 2. تحديث حالة الطلب وإضافة الرسوم والملاحظات (خاص بالإدارة)
+     * تحديث حالة الطلب وإضافة الرسوم والملاحظات
      * PUT /api/admin/requests/{id}/status
      */
     public function updateStatus(Request $request, $id)
@@ -308,7 +241,7 @@ class ServiceRequestController extends Controller
     }
 
     /**
-     * 3. استعراض الطالب لطلباته الشخصية وتتبع حالاتها
+     * استعراض الطالب لطلباته الشخصية وتتبع حالاتها
      * GET /api/student/requests
      */
     public function getStudentRequests()
@@ -344,7 +277,7 @@ class ServiceRequestController extends Controller
         }
     }
     /**
-     * 4. تحديد أو تحديث الموعد النهائي للاعتراض/إعادة العملي لمادة معينة (خاص بالإدارة)
+     * تحديد أو تحديث الموعد النهائي للاعتراض/إعادة العملي لمادة معينة
      * POST /api/admin/course-deadlines
      */
     public function setCourseDeadline(Request $request)
@@ -354,7 +287,7 @@ class ServiceRequestController extends Controller
                 'course_id'    => 'required|integer|exists:courses,id',
                 'request_type' => 'required|in:objection,lab_redo',
                 'beginning_date' => 'prohibited_if:request_type,objection|date',
-                'end_date'     => 'required|date|after:now', // يجب أن يكون تاريخ مستقبلي
+                'end_date'     => 'required|date|after:now',
             ],
             [
                 'beginning_date.prohibited_if' => 'عذراً، لا يمكن تحديد تاريخ البدء يدوياً عندما يكون نوع الطلب اعتراض (objection).',

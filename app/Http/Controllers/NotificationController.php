@@ -9,7 +9,7 @@ use Exception;
 class NotificationController extends Controller
 {
     /**
-     * 1. جلب كافة الإشعارات الخاصة بالمستخدم الحالي
+     * جلب كافة الإشعارات الخاصة بالمستخدم الحالي
      * GET /api/notifications
      */
     public function index()
@@ -32,7 +32,7 @@ class NotificationController extends Controller
     }
 
     /**
-     * 2. جلب الإشعارات غير المقروءة فقط
+     *  جلب الإشعارات غير المقروءة فقط
      * GET /api/notifications/unread
      */
     public function unread()
@@ -52,10 +52,10 @@ class NotificationController extends Controller
     }
 
     /**
-     * 3. تحويل إشعار معين إلى "مقروء"
+     * تحويل إشعار معين إلى "مقروء"
      * POST /api/notifications/{id}/read
      */
-    public function markAsRead(string $id) // 💡 إضافة string هنا تحل خطأ "no type information available"
+    public function markAsRead(string $id)
     {
         try {
             /** @var \App\Models\User $user */
@@ -79,7 +79,7 @@ class NotificationController extends Controller
     }
 
     /**
-     * 4. تعيين كافة إشعارات المستخدم كمقروءة دفعة واحدة
+     * تعيين كافة الإشعارات كمقروءة دفعة واحدة
      * POST /api/notifications/read-all
      */
     public function markAllAsRead()
@@ -99,10 +99,8 @@ class NotificationController extends Controller
         }
     }
     /**
-     * 5. حذف إشعار معين نهائياً
+     * حذف إشعار معين نهائياً
      * DELETE /api/notifications/{id}
-     *
-     * الإشعار يُحذف فقط إذا كان تابعاً للمستخدم الحالي (حماية من حذف إشعارات الآخرين)
      */
     public function deleteNotification(string $id)
     {
