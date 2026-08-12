@@ -118,13 +118,18 @@ class CourseController extends Controller
      */
     public function getEligibleCourses(Request $request)
     {
-        $request->validate(['request_type' => 'required|in:objection,lab_redo']);
+        $request->validate([
+            'request_type' => 'required|in:objection,lab_redo',
+            'objection_type' => 'required|in:theoretical,practical'
+            ]);
         $student_id = Auth::id();
         $type = $request->query('request_type');
+        $objectionType = $request->query('objection_type');
 
         // 1. جلب المواد التي لها مواعيد نهائية فعالة ولم تنتهِ بعد
         $activeCourseIds = DB::table('course_deadlines')
             ->where('request_type', $type)
+            ->where('objection_type', $objectionType)
             ->where('end_date', '>', now())
             ->pluck('course_id');
 

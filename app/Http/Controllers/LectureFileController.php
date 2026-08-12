@@ -77,6 +77,8 @@ class LectureFileController extends Controller
         ]);
 
         try {
+            $currentUser = Auth::user();
+
             $query = LectureFile::with(['course', 'uploader:id,name'])
                 ->where('course_id', $request->query('course_id'))
                 ->where('is_archived', false);
@@ -86,6 +88,14 @@ class LectureFileController extends Controller
             }
 
             $lectures = $query->orderBy('uploaded_at', 'desc')->get();
+            
+            if ($currentUser && $currentUser->role === 'student') {
+                $lectures->each(function ($lecture) {
+                    if ($lecture->uploader_type === 'volunteer' && $lecture->uploader) {
+                        $lecture->uploader->name = 'الفريق التطوعي';
+                    }
+                });
+            }
 
             return response()->json([
                 'status'  => 'success',
@@ -113,6 +123,8 @@ class LectureFileController extends Controller
         ]);
 
         try {
+            $currentUser = Auth::user();
+            
             $query = LectureFile::with(['course', 'uploader:id,name'])
                 ->where('course_id', $request->query('course_id'))
                 ->where('is_archived', true);
@@ -122,6 +134,13 @@ class LectureFileController extends Controller
             }
 
             $lectures = $query->orderBy('uploaded_at', 'desc')->get();
+            if ($currentUser && $currentUser->role === 'student') {
+                $lectures->each(function ($lecture) {
+                    if ($lecture->uploader_type === 'volunteer' && $lecture->uploader) {
+                        $lecture->uploader->name = 'الفريق التطوعي';
+                    }
+                });
+            }
 
             return response()->json([
                 'status'  => 'success',

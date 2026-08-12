@@ -285,6 +285,7 @@ class ServiceRequestController extends Controller
         $request->validate(
             [
                 'course_id'    => 'required|integer|exists:courses,id',
+                'objection_type'  => 'required|in:theoretical,practical',
                 'request_type' => 'required|in:objection,lab_redo',
                 'beginning_date' => 'prohibited_if:request_type,objection|date',
                 'end_date'     => 'required|date|after:now',
@@ -300,6 +301,7 @@ class ServiceRequestController extends Controller
 
         try {
             $courseId    = $request->input('course_id');
+            $objectionType  = $request->input('objection_type');
             $requestType = $request->input('request_type');
             $beginningDate = $request->input('beginning_date');
             $endDate     = $request->input('end_date');
@@ -307,7 +309,7 @@ class ServiceRequestController extends Controller
             // أسلوب الـ UpdateOrCreate: إذا كانت المادة لها مهلة سابقة يقوم بتحديثها، وإلا ينشئ مهلة جديدة
             DB::table('course_deadlines')
                 ->updateOrInsert(
-                    ['course_id' => $courseId, 'request_type' => $requestType], // شروط البحث
+                    ['course_id' => $courseId, 'request_type' => $requestType, 'objection_type' => $objectionType], // شروط البحث
                     ['end_date' => $endDate, 'created_at' => now()] // البيانات المراد إدخالها أو تحديثها
                 );
 
