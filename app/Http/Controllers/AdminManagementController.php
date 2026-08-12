@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Notifications\SystemNotification;
 
 
 class AdminManagementController extends Controller
@@ -17,13 +18,13 @@ class AdminManagementController extends Controller
     public function storeAdmin(Request $request)
     {
         $currentUser = $request->user();
-    
-    if (!$currentUser || $currentUser->role != 'admin') {
-        return response()->json([
-            'status'  => 'error',
-            'message' => 'عذراً، لا تملك الصلاحية الكافية لإجراء هذه العملية.'
-        ], 403);
-    }
+
+        if (!$currentUser || $currentUser->role != 'admin') {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'عذراً، لا تملك الصلاحية الكافية لإجراء هذه العملية.'
+            ], 403);
+        }
         // 1️⃣ التحقق من البيانات المدخلة بعناية
         $request->validate([
             'name'       => 'required|string|max:255',
@@ -123,7 +124,7 @@ class AdminManagementController extends Controller
             'university_id'       => 'required|string|max:255',
 
         ], [
-            'university_id.required' => 'معرف الجامعة مطلوب.',
+            'university_id.required' => 'معرف الرقم الجامعي مطلوب.',
         ]);
 
         DB::table('users')
@@ -131,9 +132,13 @@ class AdminManagementController extends Controller
             ->update([
                 'role' => 'volunteer',
             ]);
-            $user = DB::table('users')
+        $student = DB::table('users')
             ->where('university_id', $request->university_id)
             ->first();
+        $studentModel = User::find($student->id);
+        $title = "تم منحك صلاحيات الفريق التطوعي";
+        $body = "تهانينا! لقد تم منحك صلاحيات الفريق التطوعي. يمكنك الآن الوصول إلى الموارد والمهام الخاصة بالفريق التطوعي..";
+        $studentModel->notify(new SystemNotification($title, $body));
 
         //  إرجاع استجابة نجاح نظيفة للمستخدم
         return response()->json([
@@ -141,7 +146,7 @@ class AdminManagementController extends Controller
             'message' => 'تم تغيير الصلاحية بنجاح.',
             'data'    => [
                 'university_id'       => $request->university_id,
-                'name'       => $user->name,
+                'name'       => $student->name,
                 'role'       => 'volunteer',
             ]
         ], 201);
