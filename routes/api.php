@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ════════════════════════════════════════
     Route::get('/doctor/courses/assignments', [CourseAssignmentController::class, 'getCourseAssignments']); //جلب للمدرس مواده المسندة إليه فقط
     Route::get('/doctor/attendance/list', [AttendanceController::class, 'getLectureAttendance']); //جلب قائمة الحضور لمادة معينة 
+    Route::get('/doctor/attendance/lecture-numbers', [AttendanceController::class, 'getLectureNumbers']); //جلب أرقام المحاضرات المسجلة في النظام لمادة معينة
     Route::post('/attendance/session/start', [AttendanceController::class, 'startAttendanceSession']); //1. بدء جلسة حضور جديدة
     Route::post('/attendance/record', [AttendanceController::class, 'recordAttendance']); //2. مسح QR وتسجيل حضور الطالب
     Route::post('/attendance/session/end', [AttendanceController::class, 'endAttendanceSession']); // 3. إنهاء جلسة الحضور وإرسال الإشعارات

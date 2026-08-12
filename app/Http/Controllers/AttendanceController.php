@@ -529,4 +529,36 @@ class AttendanceController extends Controller
             ], 500);
         }
     }
+    /**
+     * جلب أرقام المحاضرات المسجّلة فعلياً في قاعدة البيانات لمادة ونوع جلسة معيّنين
+     * GET /api/doctor/attendance/lecture-numbers?course_id=..&session_type=..
+     */
+    public function getLectureNumbers(Request $request)
+    {
+        $request->validate([
+            'course_id'    => 'required|integer|exists:courses,id',
+            'session_type' => 'required|in:theoretical,practical',
+        ]);
+
+        try {
+            $lectureNumbers = DB::table('attendance_sessions')
+                ->where('course_id', $request->course_id)
+                ->where('session_type', $request->session_type)
+                ->distinct()
+                ->pluck('lecture_number')
+                ->filter()
+                ->sort(SORT_NATURAL)
+                ->values();
+
+            return response()->json([
+                'status' => 'success',
+                'lecture_numbers' => $lectureNumbers,
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'حدث خطأ أثناء جلب أرقام المحاضرات: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
