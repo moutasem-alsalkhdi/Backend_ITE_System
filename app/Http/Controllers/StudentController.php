@@ -77,7 +77,7 @@ class StudentController extends Controller
         }
 
         // جلب المحفظة أو إنشاؤها فوراً برصيد 0 إذا لم تكن موجودة مسبقاً
-        $wallet = Wallet::where('user_id' , $student->id)->first();
+        $wallet = Wallet::where('user_id' , $student->id)->firstOrCreate(['user_id' => $student->id], ['balance' => 0]);
 
         return response()->json([
             'status' => 'success',

@@ -80,10 +80,10 @@ class AdminFileController extends Controller
                 if ($file_type === 'students_list') {
 
                     $name          = trim($row[$col('name')]);
-                    $father_name   = trim($row[$col('father_name')]);
+                    //$father_name   = trim($row[$col('father_name')]);
                     $university_id = trim($row[$col('university_id')]);
 
-                    if (!$name || !$father_name || !$university_id) continue;
+                    if (!$name  || !$university_id) continue;
 
                     $exists = DB::table('users')
                         ->where('university_id', $university_id)
@@ -94,7 +94,7 @@ class AdminFileController extends Controller
                         DB::table('users')->insert([
                             'university_id' => $university_id,
                             'name'          => $name,
-                            'father_name'   => $father_name,
+                            //'father_name'   => $father_name,
                             'role'          => 'student',
                             'department'    => $department, // 🎯 مضاف: حفظ القسم المختار للطالب الجديد
                             'year_of_study' => $student_year,
@@ -117,7 +117,7 @@ class AdminFileController extends Controller
                 } elseif ($file_type === 'exam_numbers') {
 
                     $university_id = trim($row[$col('name')]);
-                    $father_name   = trim($row[$col('father_name')]);
+                    //$father_name   = trim($row[$col('father_name')]);
                     $exam_number   = trim($row[$col('exam_number')]);
 
                     if (!$university_id || !$exam_number) continue;

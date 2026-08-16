@@ -59,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::put('/admin/requests/{id}/status', [ServiceRequestController::class, 'updateStatus']); //تحديث حالة الطلب وإضافة الرسوم والملاحظات
    
-    Route::get('/student/search', [StudentController::class, 'searchStudent']); //البحث عن طالب بواسطة الرقم الجامعي وعرض معلوماته
+    Route::get('/student/search', [StudentController::class, 'seastudent/requestsrchStudent']); //البحث عن طالب بواسطة الرقم الجامعي وعرض معلوماته
 
     Route::post('/finance/wallet/charge', [FinanceWalletController::class, 'chargeWallet']); //شحن المحفظة برصيد
 
