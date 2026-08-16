@@ -285,32 +285,40 @@ class ServiceRequestController extends Controller
         $request->validate(
             [
                 'course_id'    => 'required|integer|exists:courses,id',
-                'objection_type'  => 'required|in:theoretical,practical',
                 'request_type' => 'required|in:objection,lab_redo',
+                'objection_type' => 'required_if:request_type,objection|in:theoretical,practical',
                 'beginning_date' => 'prohibited_if:request_type,objection|date',
-                'end_date'     => 'required|date|after:now',
+                'end_date'     => 'required|date|after:now', // يجب أن يكون تاريخ مستقبلي
             ],
             [
                 'beginning_date.prohibited_if' => 'عذراً، لا يمكن تحديد تاريخ البدء يدوياً عندما يكون نوع الطلب اعتراض (objection).',
             ]
-        );;
+        );
 
         if (Auth::user()->role !== 'admin') {
             return response()->json(['status' => 'error', 'message' => 'غير مصرح لك بإعداد مواعيد المواد.'], 403);
         }
 
         try {
-            $courseId    = $request->input('course_id');
-            $objectionType  = $request->input('objection_type');
-            $requestType = $request->input('request_type');
+            $courseId      = $request->input('course_id');
+            $requestType   = $request->input('request_type');
+            $objectionType = $request->input('objection_type');
             $beginningDate = $request->input('beginning_date');
-            $endDate     = $request->input('end_date');
+            $endDate       = $request->input('end_date');
 
-            // أسلوب الـ UpdateOrCreate: إذا كانت المادة لها مهلة سابقة يقوم بتحديثها، وإلا ينشئ مهلة جديدة
+            // أسلوب الـ UpdateOrCreate: إذا كانت المادة لها مهلة سابقة (بنفس النوع) يقوم بتحديثها، وإلا ينشئ مهلة جديدة
             DB::table('course_deadlines')
                 ->updateOrInsert(
-                    ['course_id' => $courseId, 'request_type' => $requestType, 'objection_type' => $objectionType], // شروط البحث
-                    ['end_date' => $endDate, 'created_at' => now()] // البيانات المراد إدخالها أو تحديثها
+                    [
+                        'course_id'    => $courseId,
+                        'request_type' => $requestType,
+                    ],
+                    [
+                        'objection_type' => $objectionType,
+                        
+                        'end_date'       => $endDate,
+                        'created_at'     => now(),
+                    ]
                 );
 
             return response()->json([
@@ -323,5 +331,24 @@ class ServiceRequestController extends Controller
                 'message' => 'حدث خطأ: ' . $e->getMessage()
             ], 500);
         }
+    }
+    /**
+     * 5. جلب كل المواعيد النهائية المُهيَّأة حالياً (لعرضها بجدول لوحة الأدمن)
+     * GET /api/admin/course-deadlines
+     */
+    public function getCourseDeadlines(Request $request)
+    {
+        if (Auth::user()->role !== 'admin') {
+            return response()->json(['status' => 'error', 'message' => 'غير مصرح لك بعرض هذه البيانات.'], 403);
+        }
+
+        $deadlines = DB::table('course_deadlines')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $deadlines,
+        ], 200);
     }
 }

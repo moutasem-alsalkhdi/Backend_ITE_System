@@ -118,48 +118,70 @@ class CourseController extends Controller
      */
     public function getEligibleCourses(Request $request)
     {
+        // تحويل النص الفاضي "" إلى null قبل التحقق، لأن الموبايل يرسل
+        // objection_type="" دائماً حتى لو الطلب lab_redo وما إله علاقة فيه
+        if ($request->query('objection_type') === '') {
+            $request->merge(['objection_type' => null]);
+        }
+
         $request->validate([
-            'request_type' => 'required|in:objection,lab_redo',
-            'objection_type' => 'required|in:theoretical,practical'
-            ]);
+            'request_type'   => 'required|in:objection,lab_redo',
+            'objection_type' => 'nullable|required_if:request_type,objection|in:theoretical,practical',
+        ]);
+
         $student_id = Auth::id();
         $type = $request->query('request_type');
         $objectionType = $request->query('objection_type');
 
         // 1. جلب المواد التي لها مواعيد نهائية فعالة ولم تنتهِ بعد
-        $activeCourseIds = DB::table('course_deadlines')
+        $deadlinesQuery = DB::table('course_deadlines')
             ->where('request_type', $type)
-            ->where('objection_type', $objectionType)
+            ->where('end_date', '>', now());
+
+        if ($type === 'objection') {
+            $deadlinesQuery->where('objection_type', $objectionType);
+        }
+
+        $activeCourseIds = $deadlinesQuery->pluck('course_id');
+
+        // خريطة course_id => end_date عشان نلحقها بكل مادة بالاستجابة (لعرضها بالموبايل)
+        $deadlinesMap = DB::table('course_deadlines')
+            ->where('request_type', $type)
             ->where('end_date', '>', now())
-            ->pluck('course_id');
+            ->when($type === 'objection', fn($q) => $q->where('objection_type', $objectionType))
+            ->pluck('end_date', 'course_id');
 
         // 2. جلب تفاصيل هذه المواد
         $courses = DB::table('courses')->whereIn('id', $activeCourseIds)->get();
+        foreach ($courses as $course) {
+            $course->deadline = $deadlinesMap[$course->id] ?? null;
+        }
 
         // 3. تصفية إضافية خاصة بـ التكرار العملي (lab_redo) لحملة المادة فقط
         if ($type === 'lab_redo') {
             $filteredCourses = [];
             foreach ($courses as $course) {
-                // استثناء المواد التي ليس بها عملي أصلاً
                 if ($course->practical_max_mark == 0) continue;
 
-                // التحقق من علامة الطالب (total_mark < 50 تعني راسب/حامل المادة)
                 $grade = DB::table('grades')
                     ->where('student_id', $student_id)
                     ->where('course_id', $course->id)
                     ->first();
 
-                if ($grade && $grade->total_mark < 50) {
+                $isFailing = $grade
+                    && (
+                        (isset($grade->status) && $grade->status === 'fail')
+                    );
+
+                if ($isFailing) {
                     $filteredCourses[] = $course;
                 }
             }
             return response()->json($filteredCourses);
         }
 
-        // بالنسبة للاعتراض (objection)، تعود كل المواد المتاحة وقتها تلقائياً
         return response()->json($courses);
     }
-
     /**
      * جلب مواد الطالب في الفصل الحالي والسنة الدراسية الحالية (تفيد الفريق التطوعي)
      * GET /api/student/getSemesterCourses

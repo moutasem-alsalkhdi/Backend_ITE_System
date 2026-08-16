@@ -55,11 +55,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/admin/course-deadlines', [ServiceRequestController::class, 'setCourseDeadline']); //تحديد أو تحديث الموعد النهائي للاعتراض/إعادة العملي لمادة معينة
 
+    Route::get('/admin/course-deadlines', [ServiceRequestController::class, 'getCourseDeadlines']);
+    
     Route::get('/admin/service-requests', [ServiceRequestController::class, 'getAdminRequests']); //جلب وتصنيف طلبات الخدمات الطلابية للإدارة
     
     Route::put('/admin/requests/{id}/status', [ServiceRequestController::class, 'updateStatus']); //تحديث حالة الطلب وإضافة الرسوم والملاحظات
    
-    Route::get('/student/search', [StudentController::class, 'seastudent/requestsrchStudent']); //البحث عن طالب بواسطة الرقم الجامعي وعرض معلوماته
+    Route::get('/student/search', [StudentController::class, 'searchStudent']); //البحث عن طالب بواسطة الرقم الجامعي وعرض معلوماته
 
     Route::post('/finance/wallet/charge', [FinanceWalletController::class, 'chargeWallet']); //شحن المحفظة برصيد
 
