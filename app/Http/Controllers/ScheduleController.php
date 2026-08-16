@@ -25,6 +25,7 @@ class ScheduleController extends Controller
             'image_file'    => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
             'target_year'   => 'required|integer|between:1,5',
             'academic_year' => 'required|string',
+            'department'     => 'required|string',
             'semester'      => 'required|integer|between:1,3',
         ]);
 
@@ -36,12 +37,14 @@ class ScheduleController extends Controller
         try {
             $targetYear   = $request->input('target_year');
             $academicYear = $request->input('academic_year');
+            $department   = $request->input('department');
             $semester     = $request->input('semester');
 
             // 🎯 1. البحث عن جدول موجود مسبقاً يطابق نفس الفئة المستهدفة تماماً
             $existingSchedule = DB::table('schedules')
                 ->where('target_year', $targetYear)
                 ->where('academic_year', $academicYear)
+                ->where('department', $department)
                 ->where('semester', $semester)
                 ->first();
 
@@ -81,6 +84,7 @@ class ScheduleController extends Controller
                     'target_year'   => $targetYear,
                     'academic_year' => $academicYear,
                     'semester'      => $semester,
+                    'department'    => $department,
                     'created_at'    => now(),
                 ]);
 
@@ -123,12 +127,13 @@ class ScheduleController extends Controller
             // بناء الاستعلام لجلب الجداول المتاحة لهذه السنة الدراسية
             $query = DB::table('schedules')
                 ->join('users', 'schedules.uploaded_by', '=', 'users.id')
-                ->where('schedules.target_year', $targetYear)
+                ->where('schedules.target_year', $targetYear) 
                 ->select(
                     'schedules.id',
                     'schedules.title',
                     'schedules.image_url',
                     'schedules.target_year',
+                    'schedules.department',
                     'schedules.academic_year',
                     'schedules.semester',
                     'schedules.created_at',
@@ -139,8 +144,11 @@ class ScheduleController extends Controller
             if ($request->has('semester')) {
                 $query->where('schedules.semester', $request->query('semester'));
             }
-            if ($request->has('academic_year')) {
-                $query->where('schedules.academic_year', $request->query('academic_year'));
+            if ($request->has('target_year')) {
+                $query->where('schedules.target_year', $request->query('target_year'));
+            }
+            if ($request->has('department')) {
+                $query->where('schedules.department', $request->query('department'));
             }
 
             // جلب الجداول (الأحدث دائماً أولاً)

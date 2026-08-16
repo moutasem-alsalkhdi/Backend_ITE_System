@@ -148,7 +148,7 @@ class CourseSeeder extends Seeder
             ['name' => 'المنطق الترجيحي والخوارزميات الوراثية', 'has_lab' => true, 'year_of_study' => 5, 'semester' => 2, 'department' => 'ai', 'theory_max_mark' => 70, 'practical_max_mark' => 30],
             ['name' => 'التعلم التلقائي', 'has_lab' => true, 'year_of_study' => 5, 'semester' => 2, 'department' => 'ai', 'theory_max_mark' => 70, 'practical_max_mark' => 30],
             ['name' => 'استكشاف المعرفة', 'has_lab' => true, 'year_of_study' => 5, 'semester' => 2, 'department' => 'ai', 'theory_max_mark' => 70, 'practical_max_mark' => 30],
-            ['name' => 'مشروع التخرج', 'has_lab' => true, 'year_of_study' => 5, 'semester' => 2, 'department' => 'ai', 'theory_max_mark' => 70, 'practical_max_mark' => 30],
+            ['name' => 'مشروع التخرج', 'has_lab' => true, 'year_of_study' => 5, 'semester' => 2, 'department' => 'ai', 'theory_max_mark' => 100, 'practical_max_mark' => 0],
         ];
 
         // حقن المصفوفة بالكامل داخل جدول المواد بضغطة زر واحدة

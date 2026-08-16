@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->string('image_url'); // مسار حفظ صورة الجدول على السيرفر
             $table->tinyInteger('target_year'); // السنة الدراسية المستهدفة (1، 2، 3، 4، 5)
             $table->string('academic_year'); // السنة الأكاديمية (مثال: 2025-2026)
+            $table->string('department'); 
             $table->tinyInteger('semester'); // الفصل الدراسي (1: أول، 2: ثاني، 3: تكميلي/صيفي)
 
             // طابع زمني للرفع متوافق مع الـ Query Builder تلقائياً
